@@ -122,7 +122,7 @@ func GetCalendar(c *gin.Context) {
 
 func PutCalendar(c *gin.Context, body *struct {
 	Name  string      `json:"name" form:"name" binding:"required,alphanumunicode"`
-	Desc  string      `json:"desc" form:"desc" binding:"alphanumunicode"`
+	Desc  string      `json:"desc" form:"desc" binding:"omitempty,alphanumunicode"`
 	Color types.Color `json:"color" form:"color" binding:"required"`
 }) {
 	u := util.GetUtil(c)
@@ -159,8 +159,8 @@ func PutCalendar(c *gin.Context, body *struct {
 }
 
 func PatchCalendar(c *gin.Context, body *struct {
-	Name       *string      `json:"name" form:"name" binding:"required,alphanumunicode"`
-	Desc       *string      `json:"desc" form:"desc" binding:"alphanumunicode"`
+	Name       *string      `json:"name" form:"name" binding:"omitempty,alphanumunicode"`
+	Desc       *string      `json:"desc" form:"desc" binding:"omitempty,alphanumunicode"`
 	Color      *types.Color `json:"color" form:"color" binding:"required"`
 	Overridden bool         `json:"overridden" form:"overridden"`
 }) {

@@ -173,7 +173,7 @@ func GetEvent(c *gin.Context) {
 
 func PutEvent(c *gin.Context, body *struct {
 	Name     string         `json:"name" form:"name" binding:"required,alphanumunicode"`
-	Desc     string         `json:"desc" form:"desc" binding:"alphanumunicode"`
+	Desc     string         `json:"desc" form:"desc" binding:"omitempty,alphanumunicode"`
 	Color    types.Color    `json:"color" form:"color" binding:"required"`
 	AllDay   bool           `json:"date.all_day" form:"date_all_day"`
 	Start    time.Time      `json:"date.start" form:"date_start" binding:"required"`
@@ -229,8 +229,8 @@ func PutEvent(c *gin.Context, body *struct {
 }
 
 func PatchEvent(c *gin.Context, body *struct {
-	Name       *string        `json:"name" form:"name" binding:"alphanumunicode"`
-	Desc       *string        `json:"desc" form:"desc" binding:"alphanumunicode"`
+	Name       *string        `json:"name" form:"name" binding:"omitempty,alphanumunicode"`
+	Desc       *string        `json:"desc" form:"desc" binding:"omitempty,alphanumunicode"`
 	Color      *types.Color   `json:"color" form:"color"`
 	AllDay     *bool          `json:"date.all_day" form:"date_all_day"`
 	Start      *time.Time     `json:"date.start" form:"date_start"`
