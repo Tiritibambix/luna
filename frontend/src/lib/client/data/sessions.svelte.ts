@@ -64,7 +64,7 @@ export class ActiveSessions {
   public async requestToken(session: Session, password: string): Promise<{ token: string, session: Session }> {
     const body = new FormData();
     body.append("name", session.user_agent);
-    body.append("permissions", JSON.stringify(session.permissions));
+    for (const permission of session.permissions) body.append("permissions", permission);
     body.append("password", password);
 
     const token = (await fetchJson(`/api/sessions`, { method: "PUT", body: body })).token;
@@ -79,10 +79,10 @@ export class ActiveSessions {
   public async updateSession(session: Session, password: string): Promise<Session> {
     const body = new FormData();
     body.append("name", session.user_agent);
-    body.append("permissions", JSON.stringify(session.permissions));
+    for (const permission of session.permissions) body.append("permissions", permission);
     body.append("password", password);
 
-    const token = (await fetchJson(`/api/sessions/${session.id}`, { method: "PATCH", body: body })).token;
+    await fetchJson(`/api/sessions/${session.id}`, { method: "PATCH", body: body });
     await this.fetch();
 
     return this.activeSessions.filter(x => x.id === session.id)[0]
