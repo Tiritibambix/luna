@@ -28,6 +28,7 @@
   import RecurrenceInput from "../forms/RecurrenceInput.svelte";
   import Link from "../forms/Link.svelte";
   import RecurrenceRuleModal from "./RecurrenceRuleModal.svelte";
+  import Title from "../layout/Title.svelte";
 
   interface Props {
     showModal?: (initial?: EventModel, date?: Date, anchor?: HTMLElement) => Promise<EventModel>;
@@ -244,7 +245,11 @@
   submittable={event.calendar !== "" && event.name !== "" && (event.date.start.getTime() < event.date.end.getTime() || (event.date.start.getTime() <= event.date.end.getTime() && event.date.allDay))}
 >
   {#if event != EmptyEvent}
-    <TextInput bind:value={event.name} name="name" placeholder={t("form.name")} editable={editMode} />
+    {#if editMode}
+      <TextInput bind:value={event.name} name="name" placeholder={t("form.name")} editable={true} />
+    {:else}
+      <Title>{event.name}</Title>
+    {/if}
     <SelectInput bind:value={event.calendar} name="calendar" placeholder={t("calendar.display")} options={selectableCalendars} editable={editMode && eventSourceType !== "ical"} />
     {#if editMode}
       <ColorInput bind:color={event.color} name="color" editable={editMode} />
