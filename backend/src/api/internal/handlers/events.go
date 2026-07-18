@@ -297,11 +297,11 @@ func PatchEvent(c *gin.Context, body *struct {
 	}
 	newRdate := event.GetDate().Recurrence().RdateString()
 	if body.Rdate != nil {
-		newRrule = *body.Rdate
+		newRdate = *body.Rdate
 	}
 	newExdate := event.GetDate().Recurrence().ExdateString()
 	if body.Exdate != nil {
-		newRrule = *body.Exdate
+		newExdate = *body.Exdate
 	}
 
 	recurrence, err := types.EventRecurrenceFromStrings(newRrule, newRdate, newExdate)
