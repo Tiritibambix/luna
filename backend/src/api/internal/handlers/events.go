@@ -79,6 +79,12 @@ func GetEvents(c *gin.Context) {
 		return
 	}
 
+	// Save in the database (the "parent" events need to exist in the database when inserting recurrence instances!)
+	if _, tr = u.Tx.Queries().OverrideEvents(eventsFromCal); tr != nil {
+		u.Error(tr)
+		return
+	}
+
 	// Expand recurring events
 	expandedEvents := make([]types.Event, len(eventsFromCal))
 	count := 0
@@ -101,7 +107,7 @@ func GetEvents(c *gin.Context) {
 		}
 	}
 
-	// Save in the database and apply overrides
+	// Save in the database and apply overrides to the specific recurrence instances
 	events, tr := u.Tx.Queries().OverrideEvents(expandedEvents[:count])
 	if tr != nil {
 		u.Error(tr)
@@ -243,6 +249,8 @@ func PatchEvent(c *gin.Context, body *struct {
 	Rrule      *string        `json:"date.rrule" form:"date_rrule"`
 	Rdate      *string        `json:"date.rdate" form:"date_rdate"`
 	Exdate     *string        `json:"date.exdate" form:"date_exdate"`
+}, query *struct {
+	Affect string `form:"affect,default=this" binding:"required,oneof=this thisandfuture all"`
 }) {
 	u := util.GetUtil(c)
 
@@ -326,7 +334,9 @@ func PatchEvent(c *gin.Context, body *struct {
 	u.Success(nil)
 }
 
-func DeleteEvent(c *gin.Context) {
+func DeleteEvent(c *gin.Context, query *struct {
+	Affect string `form:"affect,default=this" binding:"required,oneof=this thisandfuture all"`
+}) {
 	u := util.GetUtil(c)
 
 	userId := util.GetUserId(c)
@@ -344,18 +354,53 @@ func DeleteEvent(c *gin.Context) {
 		return
 	}
 
-	// Remove the calendar from the upstream source
-	err = event.GetCalendar().DeleteEvent(event, u.Tx.Queries())
-	if err != nil {
-		u.Error(err)
-		return
+	var parentEvent types.Event
+	if event.GetParentId() != nil {
+		parentEvent, err = u.Tx.Queries().GetEvent(userId, eventId, u.Context, u.Config)
+		if err != nil {
+			u.Error(err)
+			return
+		}
+	} else {
+		parentEvent = event
 	}
 
-	// Delete event entry from the database
-	err = u.Tx.Queries().DeleteEvent(userId, eventId)
-	if err != nil {
-		u.Error(err)
-		return
+	// If the event does not repeat, we automatically affect "all" instances
+	if !event.GetDate().Recurrence().Repeats() {
+		query.Affect = "all"
+	}
+
+	switch query.Affect {
+	case "this":
+		// Removing just one instance of a recurrence equates to adding that event to EXDATE
+		if parentEvent == nil {
+			u.Error(errors.New().Status(http.StatusInternalServerError).
+				Append(errors.LvlWordy, "Could not find parent event").
+				AltStr(errors.LvlDebug, "Could not find parent event of %v", event.GetId()),
+			)
+			return
+		}
+		parentEvent.GetDate().Recurrence().AddException(event.GetDate().Start())
+		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, parentEvent.GetName(), parentEvent.GetDesc(), parentEvent.GetColor(), parentEvent.GetDate(), false, u.Tx.Queries())
+		if err != nil {
+			u.Error(err)
+			return
+		}
+	case "thisandfuture":
+	case "all":
+		// Remove the event from the upstream source
+		err = parentEvent.GetCalendar().DeleteEvent(parentEvent, u.Tx.Queries())
+		if err != nil {
+			u.Error(err)
+			return
+		}
+
+		// Delete event entry from the database
+		err = u.Tx.Queries().DeleteEvent(userId, *parentEvent.GetParentId())
+		if err != nil {
+			u.Error(err)
+			return
+		}
 	}
 
 	u.Success(nil)

@@ -100,8 +100,8 @@ func run(api *util.Api) {
 	// /api/events/*
 	eventEndpoints := authenticatedEndpoints.Group("/events")
 	eventEndpoints.GET("/:eventId", middleware.RequirePermissions(types.PermReadEvents), handlers.GetEvent)
-	eventEndpoints.PATCH("/:eventId", middleware.RequirePermissionAndBody(types.PermEditEvents, handlers.PatchEvent)...)
-	eventEndpoints.DELETE("/:eventId", middleware.RequirePermissions(types.PermDeleteEvents), handlers.DeleteEvent)
+	eventEndpoints.PATCH("/:eventId", middleware.RequirePermissionAndBodyAndQuery(types.PermEditEvents, handlers.PatchEvent)...)
+	eventEndpoints.DELETE("/:eventId", middleware.RequirePermissionAndQuery(types.PermDeleteEvents, handlers.DeleteEvent)...)
 
 	// /api/files/*
 	fileEndpoints := authenticatedEndpoints.Group("/files")

@@ -7,6 +7,7 @@ import (
 
 type Event interface {
 	GetId() ID
+	GetParentId() *ID
 	GetCalendar() Calendar
 
 	GetName() string
@@ -26,7 +27,7 @@ type Event interface {
 
 	Clone() Event
 
-	SupplyMasterEvent(masterEvent Event)
+	SetParent(parentEvent Event)
 	IsRecurrenceInstance() bool
 	GetRecurrenceId() string
 }
@@ -71,7 +72,7 @@ func ExpandRecurrence(event Event, start *time.Time, end *time.Time) ([]Event, *
 		newEvent := event.Clone()
 		newEvent.GetDate().SetStart(&newStart)
 		newEvent.GetDate().SetEnd(&newEnd)
-		newEvent.SupplyMasterEvent(event)
+		newEvent.SetParent(event)
 
 		events[actualEventCount] = newEvent
 		actualEventCount += 1

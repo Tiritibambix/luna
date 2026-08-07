@@ -20,6 +20,9 @@ func (q *Queries) insertEvents(events []types.Event) *errors.ErrorTrace {
 	for _, event := range events {
 		row := []any{
 			event.GetId(),
+			event.GetParentId(),
+			event.GetDate().Start(),
+			event.GetDate().End(),
 			event.GetCalendar().GetId(),
 			event.GetSettings().Bytes(),
 		}
@@ -32,8 +35,8 @@ func (q *Queries) insertEvents(events []types.Event) *errors.ErrorTrace {
 		q.Context,
 		"events",
 		"id",
-		[]string{"id", "calendar", "settings"},
-		[]string{"settings"},
+		[]string{"id", "parent_id", "start_timestamp", "end_timestamp", "calendar", "settings"},
+		[]string{"settings", "start_timestamp", "end_timestamp"},
 		rows,
 		false,
 		"",
@@ -204,6 +207,18 @@ func (q *Queries) GetEvent(userId types.ID, eventId types.ID, ctx context.Contex
 			AltStr(errors.LvlBroad, "Could not get event")
 	}
 
+	if parentId := scanner.GetEventEntry().ParentId; parentId != nil {
+		parentEvent, tr := q.GetEvent(userId, *parentId, ctx, config)
+		if tr != nil {
+			return nil, tr.
+				Append(errors.LvlDebug, "Could not get parent event %v for user %v", parentId, userId).
+				AltStr(errors.LvlWordy, "Could not get parent event").
+				AltStr(errors.LvlBroad, "Could not get event")
+		}
+
+		event.SetParent(parentEvent)
+	}
+
 	return event, nil
 }
 
@@ -211,10 +226,13 @@ func (q *Queries) InsertEvent(event types.Event) *errors.ErrorTrace {
 	_, err := q.Tx.Exec(
 		q.Context,
 		`
-		INSERT INTO events (id, calendar, settings)
-		VALUES ($1, $2, $3);
+		INSERT INTO events (id, parent_id, start_timestamp, end_timestamp, calendar, settings)
+		VALUES ($1, $2, $3, $4, $5, $6);
 		`,
 		event.GetId().UUID(),
+		event.GetParentId(),
+		event.GetDate().Start(),
+		event.GetDate().End(),
 		event.GetCalendar().GetId().UUID(),
 		event.GetSettings().Bytes(),
 	)
@@ -295,7 +313,7 @@ func (q *Queries) DeleteEvent(userId types.ID, eventId types.ID) *errors.ErrorTr
 
 func (q *Queries) SetEventOverrides(eventId types.ID, name string, desc string, color *types.Color) *errors.ErrorTrace {
 	columns := []string{}
-	params := []any{eventId.UUID()}
+	params := []any{eventId.UUID(), false}
 
 	if name != "" {
 		columns = append(columns, "title")
@@ -312,14 +330,14 @@ func (q *Queries) SetEventOverrides(eventId types.ID, name string, desc string, 
 
 	query := fmt.Sprintf(
 		`
-		INSERT INTO event_overrides (eventid, %s)
-		VALUES ($1, %s)
+		INSERT INTO event_overrides (eventid, future, %s)
+		VALUES ($1, $2, %s)
 		ON CONFLICT (eventid) DO UPDATE
 		SET %s;
 		`,
 		strings.Join(columns, ", "),
-		util.GenerateArgList(2, len(columns)),
-		util.GenerateSetList(2, columns),
+		util.GenerateArgList(3, len(columns)),
+		util.GenerateSetList(3, columns),
 	)
 
 	_, err := q.Tx.Exec(

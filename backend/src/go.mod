@@ -5,7 +5,7 @@ go 1.22.4
 require (
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/emersion/go-ical v0.0.0-20240127095438-fc1c9d8fb2b6
-	github.com/emersion/go-webdav v0.6.0
+	github.com/emersion/go-webdav v0.7.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.1

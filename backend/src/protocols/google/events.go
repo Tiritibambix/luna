@@ -32,12 +32,10 @@ type GoogleEventSettings struct {
 
 func (settings *GoogleEventSettings) Clone() *GoogleEventSettings {
 	return &GoogleEventSettings{
-		GoogleId:           settings.GoogleId,
-		Uid:                settings.Uid,
-		RecurrenceId:       settings.RecurrenceId,
-		RecurrenceMasterId: settings.RecurrenceMasterId,
-		IsFirstRecurrence:  settings.IsFirstRecurrence,
-		rawEvent:           settings.rawEvent,
+		GoogleId:     settings.GoogleId,
+		Uid:          settings.Uid,
+		RecurrenceId: settings.RecurrenceId,
+		rawEvent:     settings.rawEvent,
 	}
 }
 
@@ -143,6 +141,16 @@ func (event *GoogleEvent) GetId() types.ID {
 	return crypto.DeriveID(masterEventId, event.settings.RecurrenceId)
 }
 
+func (event *GoogleEvent) GetParentId() *types.ID {
+	masterEventId := crypto.DeriveID(event.calendar.GetId(), event.settings.Uid)
+
+	if event.settings.RecurrenceId == "" || event.settings.IsFirstRecurrence {
+		return nil
+	}
+
+	return &masterEventId
+}
+
 func (event *GoogleEvent) GetName() string {
 	return event.name
 }
@@ -203,7 +211,7 @@ func (event *GoogleEvent) Clone() types.Event {
 	}
 }
 
-func (event *GoogleEvent) SupplyMasterEvent(masterEvent types.Event) {
+func (event *GoogleEvent) SetParent(masterEvent types.Event) {
 	event.settings.RecurrenceMasterId = masterEvent.GetSettings().(*GoogleEventSettings).GoogleId
 
 	if event.settings.RecurrenceId == "" {

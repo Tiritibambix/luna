@@ -31,7 +31,7 @@
   }
 </script>
 
-<Modal title={t(`event.recurrence.title.${editing ? "edit" : "delete"}`)} bind:showModal={showModalInternal} bind:success bind:failure>
+<Modal title={t(`event.recurrence.${editing ? "edit" : "delete"}.title`)} bind:showModal={showModalInternal} bind:success bind:failure>
   <RadioInput
     name="recurrence_affect"
     bind:value={chosen}

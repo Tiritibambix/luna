@@ -223,7 +223,7 @@ func (calendar *GoogleCalendar) GetEvents(start time.Time, end time.Time, q type
 						AltStr(errors.LvlWordy, "Could not parse event")
 				}
 				event.GetDate().Recurrence().MarkModification(modifiedTime)
-				modification.SupplyMasterEvent(event)
+				modification.SetParent(event)
 			}
 		}
 	}

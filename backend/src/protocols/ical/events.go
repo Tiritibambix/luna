@@ -12,27 +12,26 @@ import (
 )
 
 type IcalEvent struct {
-	name       string
-	desc       string
-	color      *types.Color
-	overridden bool
-	settings   *IcalEventSettings
-	calendar   *IcalCalendar
-	eventDate  *types.EventDate
+	name        string
+	desc        string
+	color       *types.Color
+	overridden  bool
+	settings    *IcalEventSettings
+	calendar    *IcalCalendar
+	eventDate   *types.EventDate
+	parentEvent *types.ID
 }
 
 type IcalEventSettings struct {
-	Uid               string `json:"uid"`
-	RecurrenceId      string `json:"recurrence_id"`
-	IsFirstRecurrence bool   `json:"is_first_recurrence"`
+	Uid          string `json:"uid"`
+	RecurrenceId string `json:"recurrence_id"`
 	//rawEvent *ical.Event `json:"-"`
 }
 
 func (settings *IcalEventSettings) Clone() *IcalEventSettings {
 	return &IcalEventSettings{
-		Uid:               settings.Uid,
-		RecurrenceId:      settings.RecurrenceId,
-		IsFirstRecurrence: settings.IsFirstRecurrence,
+		Uid:          settings.Uid,
+		RecurrenceId: settings.RecurrenceId,
 	}
 }
 
@@ -54,9 +53,8 @@ func (calendar *IcalCalendar) eventFromIcal(props *ical.Props) (*IcalEvent, *err
 		color:      parsedProps.Color,
 		overridden: false,
 		settings: &IcalEventSettings{
-			Uid:               parsedProps.Uid,
-			RecurrenceId:      parsedProps.RecurrenceId,
-			IsFirstRecurrence: parsedProps.RecurrenceId == "",
+			Uid:          parsedProps.Uid,
+			RecurrenceId: parsedProps.RecurrenceId,
 			//rawEvent: icalEvent,
 		},
 		calendar:  calendar,
@@ -77,11 +75,15 @@ func (settings *IcalEventSettings) Bytes() []byte {
 func (event *IcalEvent) GetId() types.ID {
 	masterEventId := crypto.DeriveID(event.calendar.GetId(), event.settings.Uid)
 
-	if event.settings.RecurrenceId == "" || event.settings.IsFirstRecurrence {
+	if event.parentEvent == nil {
 		return masterEventId
 	}
 
 	return crypto.DeriveID(masterEventId, event.settings.RecurrenceId)
+}
+
+func (event *IcalEvent) GetParentId() *types.ID {
+	return event.parentEvent
 }
 
 func (event *IcalEvent) GetName() string {
@@ -144,9 +146,13 @@ func (event *IcalEvent) Clone() types.Event {
 	}
 }
 
-func (event *IcalEvent) SupplyMasterEvent(masterEvent types.Event) {
+func (event *IcalEvent) SetParent(masterEvent types.Event) {
 	event.settings.RecurrenceId = types.SerializeIcalTime(event.eventDate.Start(), event.eventDate.AllDay(), true)
-	event.settings.IsFirstRecurrence = masterEvent.GetDate().Start().Equal(*event.eventDate.Start())
+
+	if !masterEvent.GetDate().Start().Equal(*event.eventDate.Start()) {
+		parentId := masterEvent.GetId()
+		event.parentEvent = &parentId
+	}
 }
 
 func (event *IcalEvent) IsRecurrenceInstance() bool {

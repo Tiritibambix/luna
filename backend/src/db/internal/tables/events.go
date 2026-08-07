@@ -7,13 +7,19 @@ import (
 func (q *Tables) InitializeEventsTable() error {
 	var err error
 	// Events table:
-	// id calendar settings
+	// id parent_id start_timestamp end_timestamp calendar settings
+	//
+	// The parent is the "original" event in case of recurrences.
+	// The timestamps are included for future-proofing.
 	_, err = q.Tx.Exec(
 		q.Context,
 		`
 		CREATE TABLE events (
 			id UUID PRIMARY KEY,
-			calendar UUID REFERENCES calendars(id) ON DELETE CASCADE,
+			parent_id UUID REFERENCES events(id) ON DELETE CASCADE,
+			start_timestamp TIMESTAMP NOT NULL,
+			end_timestamp TIMESTAMP NOT NULL,
+			calendar UUID NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
 			settings JSONB NOT NULL
 		);
 	`)
@@ -41,10 +47,11 @@ func (q *Tables) InitializeEventOverridesTable() error {
 		q.Context,
 		`
 		CREATE TABLE event_overrides (
-			eventid UUID UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+			eventid UUID NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
 			title TEXT,
 			description TEXT,
-			color BYTEA
+			color BYTEA,
+			future BOOLEAN
 		);
 	`)
 	if err != nil {

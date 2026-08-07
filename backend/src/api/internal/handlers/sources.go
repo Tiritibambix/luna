@@ -101,7 +101,7 @@ func GetSource(c *gin.Context) {
 	u.Success(&gin.H{"source": exposedSource})
 }
 
-func parseSource(c *gin.Context, sourceType string, sourceName string, sourceAuth types.AuthMethod, sourceSettings types.SourceSettings, user types.ID, q types.DatabaseQueries, ctx context.Context) (types.Source, *errors.ErrorTrace) {
+func parseSource(_ *gin.Context, sourceType string, sourceName string, sourceAuth types.AuthMethod, sourceSettings types.SourceSettings, user types.ID, q types.DatabaseQueries, ctx context.Context) (types.Source, *errors.ErrorTrace) {
 	var tr *errors.ErrorTrace
 	var source types.Source
 

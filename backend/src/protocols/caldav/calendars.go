@@ -148,17 +148,20 @@ func (calendar *CaldavCalendar) CanAddEvents() bool {
 	return true
 }
 
-func (calendar *CaldavCalendar) convertEvent(event *caldav.CalendarObject, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
-	convertedEvent, err := calendar.eventFromCaldav(event, q)
+func (calendar *CaldavCalendar) convertEvent(event *caldav.CalendarObject, q types.DatabaseQueries) ([]types.Event, *errors.ErrorTrace) {
+	convertedEvents, err := calendar.eventsFromCaldav(event, q)
 	if err != nil {
 		return nil, err.
 			Append(errors.LvlDebug, "Could not convert calendar %v", event.Path).
 			AltStr(errors.LvlWordy, "Could not convert calendar")
 	}
 
-	castedEvent := (types.Event)(convertedEvent)
+	castedEvents := make([]types.Event, len(convertedEvents))
+	for i, event := range convertedEvents {
+		castedEvents[i] = event
+	}
 
-	return castedEvent, nil
+	return castedEvents, nil
 }
 
 func (calendar *CaldavCalendar) getEvents(query *caldav.CalendarQuery, q types.DatabaseQueries) ([]types.Event, *errors.ErrorTrace) {
@@ -177,19 +180,24 @@ func (calendar *CaldavCalendar) getEvents(query *caldav.CalendarQuery, q types.D
 	masterEvents := make(map[string]int)
 	masterEventIndices := make(map[int]bool)
 
-	convertedEvents := make([]types.Event, len(events))
-	for i, event := range events {
-		convertedEvents[i], tr = calendar.convertEvent(&event, q)
+	convertedEvents := make([]types.Event, 0, len(events))
+	for _, event := range events {
+		events, tr := calendar.convertEvent(&event, q)
 		if tr != nil {
 			return nil, tr.
 				Append(errors.LvlBroad, "Could not get events")
 		}
 
-		eventSettings := convertedEvents[i].GetSettings().(*CaldavEventSettings)
+		for _, event := range events {
+			eventSettings := event.GetSettings().(*CaldavEventSettings)
 
-		if eventSettings.RecurrenceId == "" {
-			masterEvents[eventSettings.Uid] = i
-			masterEventIndices[i] = true
+			if len(eventSettings.RecurrenceId) == 0 {
+				i := len(convertedEvents)
+				masterEvents[eventSettings.Uid] = i
+				masterEventIndices[i] = true
+			}
+
+			convertedEvents = append(convertedEvents, event)
 		}
 	}
 
@@ -201,34 +209,42 @@ func (calendar *CaldavCalendar) getEvents(query *caldav.CalendarQuery, q types.D
 		eventSettings := event.GetSettings().(*CaldavEventSettings)
 		if masterEvent, exists := masterEvents[eventSettings.Uid]; exists {
 			convertedEvents[masterEvent].GetDate().Recurrence().MarkModification(common.ExtractDateFromRecurrenceId(event))
+			event.SetParent(convertedEvents[masterEvent])
 		}
 	}
 
 	return convertedEvents, nil
 }
 
-func (calendar *CaldavCalendar) GetEvents(start time.Time, end time.Time, q types.DatabaseQueries) ([]types.Event, *errors.ErrorTrace) {
+func (calendar *CaldavCalendar) getEventsByFilters(filters []caldav.CompFilter, q types.DatabaseQueries) ([]types.Event, *errors.ErrorTrace) {
 	return calendar.getEvents(&caldav.CalendarQuery{
 		CompRequest: caldav.CalendarCompRequest{
 			Name: "VCALENDAR",
 			Comps: []caldav.CalendarCompRequest{{
 				Name: "VEVENT",
 				Props: []string{
-					"SUMMARY",
-					"UID",
-					"DTSTART",
-					"DTEND",
-					"DURATION",
+					ical.PropSummary,
+					ical.PropUID,
+					ical.PropDateTimeStart,
+					ical.PropDateTimeEnd,
+					ical.PropDateTimeEnd,
+					ical.PropRecurrenceID,
 				},
 			}},
 		},
 		CompFilter: caldav.CompFilter{
-			Name: "VCALENDAR",
-			Comps: []caldav.CompFilter{{
-				Name:  "VEVENT",
-				Start: start,
-				End:   end,
-			}},
+			Name:  "VCALENDAR",
+			Comps: filters,
+		},
+	}, q)
+}
+
+func (calendar *CaldavCalendar) GetEvents(start time.Time, end time.Time, q types.DatabaseQueries) ([]types.Event, *errors.ErrorTrace) {
+	return calendar.getEventsByFilters([]caldav.CompFilter{
+		{
+			Name:  "VEVENT",
+			Start: start,
+			End:   end,
 		},
 	}, q)
 }
@@ -236,19 +252,29 @@ func (calendar *CaldavCalendar) GetEvents(start time.Time, end time.Time, q type
 func (calendar *CaldavCalendar) GetEvent(settings types.EventSettings, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
 	caldavSettings := settings.(*CaldavEventSettings)
 
+	// Fetch event directly by path
 	obj, err := calendar.client.GetCalendarObject(q.GetContext(), caldavSettings.Url.Path)
 	if err != nil {
 		return nil, errors.InterpretRemoteError(errors.New().AddErr(errors.LvlDebug, err), "calendar", "CalDAV calendar").
 			Append(errors.LvlBroad, "Could not get event")
 	}
 
-	cal, tr := calendar.convertEvent(obj, q)
+	events, tr := calendar.convertEvent(obj, q)
 	if tr != nil {
 		return nil, tr.
 			Append(errors.LvlBroad, "Could not get event")
 	}
 
-	return cal, nil
+	for _, event := range events {
+		if event.GetSettings().(*CaldavEventSettings).RecurrenceId == caldavSettings.RecurrenceId {
+			return event, nil
+		}
+	}
+
+	return nil, errors.New().Status(http.StatusInternalServerError).
+		Append(errors.LvlDebug, "The returned collection from %s did not contain a matching recurrence ID %s", caldavSettings.Url.Path, caldavSettings.RecurrenceId).
+		AltStr(errors.LvlWordy, "The returned collection did not contain a matching recurrence ID").
+		Append(errors.LvlBroad, "Could not get event")
 }
 
 func setEventProps(cal *ical.Calendar, id string, name string, desc string, color *types.Color, date *types.EventDate) *errors.ErrorTrace {
@@ -375,14 +401,20 @@ func (calendar *CaldavCalendar) AddEvent(name string, desc string, color *types.
 			Append(errors.LvlBroad, "Could not add event")
 	}
 
-	finishedEvent, tr := calendar.eventFromCaldav(obj, q)
+	finishedEvent, tr := calendar.eventsFromCaldav(obj, q)
 	if tr != nil {
 		return nil, tr.
 			Append(errors.LvlWordy, "Could not parse finished event").
 			Append(errors.LvlBroad, "Could not add event")
 	}
 
-	return finishedEvent, nil
+	if len(finishedEvent) == 0 {
+		return nil, tr.Status(http.StatusInternalServerError).
+			AltStr(errors.LvlWordy, "Could not find finished event").
+			Append(errors.LvlBroad, "Could not add event")
+	}
+
+	return finishedEvent[0], nil
 }
 
 func (calendar *CaldavCalendar) EditEvent(originalEvent types.Event, name string, desc string, color *types.Color, date *types.EventDate, _ bool, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
@@ -413,14 +445,20 @@ func (calendar *CaldavCalendar) EditEvent(originalEvent types.Event, name string
 			Append(errors.LvlBroad, "Could not add event")
 	}
 
-	finishedEvent, tr := calendar.eventFromCaldav(obj, q)
+	finishedEvent, tr := calendar.eventsFromCaldav(obj, q)
 	if tr != nil {
 		return nil, tr.
 			Append(errors.LvlWordy, "Could not parse finished event").
 			Append(errors.LvlBroad, "Could not add event")
 	}
 
-	return finishedEvent, nil
+	if len(finishedEvent) == 0 {
+		return nil, tr.Status(http.StatusInternalServerError).
+			AltStr(errors.LvlWordy, "Could not find finished event").
+			Append(errors.LvlBroad, "Could not add event")
+	}
+
+	return finishedEvent[0], nil
 }
 
 func (calendar *CaldavCalendar) DeleteEvent(event types.Event, q types.DatabaseQueries) *errors.ErrorTrace {

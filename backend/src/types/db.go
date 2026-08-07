@@ -9,6 +9,7 @@ import (
 
 type EventDatabaseEntry struct {
 	Id       ID     `db:"id" encrypted:"false"`
+	ParentId *ID    `db:"parent_id" encrypted:"false"`
 	Calendar ID     `db:"calendar" encrypted:"false"`
 	Settings []byte `db:"settings" encrypted:"false"`
 }
