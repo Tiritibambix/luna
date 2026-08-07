@@ -7,7 +7,10 @@ import (
 	"luna-backend/types"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
+
+var _ binding.BindUnmarshaler = (*types.Color)(nil) // necessary for https://gin-gonic.com/en/docs/binding/bind-custom-unmarshaler/
 
 type exposedCalendar struct {
 	Id           types.ID     `json:"id"`
@@ -232,7 +235,7 @@ func DeleteCalendar(c *gin.Context) {
 }
 
 func ChangeCalendarDisplayOrder(c *gin.Context, body *struct {
-	Index uint16 `json:"index" form:"index" binding:"required"`
+	Index *uint16 `json:"index" form:"index" binding:"required"`
 }) {
 	u := util.GetUtil(c)
 
@@ -244,7 +247,7 @@ func ChangeCalendarDisplayOrder(c *gin.Context, body *struct {
 		return
 	}
 
-	tr = u.Tx.Queries().UpdateCalendarDisplayOrder(userId, calendarId, body.Index)
+	tr = u.Tx.Queries().UpdateCalendarDisplayOrder(userId, calendarId, *body.Index)
 	if tr != nil {
 		u.Error(tr)
 		return

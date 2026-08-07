@@ -324,7 +324,7 @@ func DeleteSource(c *gin.Context) {
 }
 
 func ChangeSourceDisplayOrder(c *gin.Context, body *struct {
-	Index uint16 `json:"index" form:"index" binding:"required"`
+	Index *uint16 `json:"index" form:"index" binding:"required"`
 }) {
 	u := util.GetUtil(c)
 
@@ -336,7 +336,7 @@ func ChangeSourceDisplayOrder(c *gin.Context, body *struct {
 		return
 	}
 
-	tr = u.Tx.Queries().UpdateSourceDisplayOrder(userId, sourceId, body.Index)
+	tr = u.Tx.Queries().UpdateSourceDisplayOrder(userId, sourceId, *body.Index)
 	if tr != nil {
 		u.Error(tr)
 		return

@@ -181,6 +181,15 @@ func (c *Color) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (c *Color) UnmarshalParam(text string) error {
+	parsed, err := ParseColor(text)
+	if err != nil {
+		return err
+	}
+	*c = *parsed
+	return nil
+}
+
 func (c *Color) IsEmpty() bool {
 	return c == nil || c.empty
 }

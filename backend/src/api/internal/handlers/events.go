@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
+
+var _ binding.BindUnmarshaler = (*types.Color)(nil) // necessary for https://gin-gonic.com/en/docs/binding/bind-custom-unmarshaler/
 
 type exposedEvent struct {
 	Id         types.ID         `json:"id"`
