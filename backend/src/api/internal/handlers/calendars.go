@@ -232,7 +232,7 @@ func DeleteCalendar(c *gin.Context) {
 }
 
 func ChangeCalendarDisplayOrder(c *gin.Context, body *struct {
-	Index uint16 `json:"index" form:"index" binding:"required"`
+	Index *uint16 `json:"index" form:"index" binding:"required"`
 }) {
 	u := util.GetUtil(c)
 

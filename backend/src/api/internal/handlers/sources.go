@@ -324,7 +324,7 @@ func DeleteSource(c *gin.Context) {
 }
 
 func ChangeSourceDisplayOrder(c *gin.Context, body *struct {
-	Index uint16 `json:"index" form:"index" binding:"required"`
+	Index *uint16 `json:"index" form:"index" binding:"required"`
 }) {
 	u := util.GetUtil(c)
 
