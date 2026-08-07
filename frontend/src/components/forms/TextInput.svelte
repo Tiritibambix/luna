@@ -11,7 +11,6 @@
   import { ColorKeys } from "../../types/colors";
 
   import { t } from "@sveltia/i18n";
-  import { onMount } from "svelte";
 
   let passwordVisible: boolean = $state(false);
 
@@ -84,7 +83,6 @@
   // Immediately tell the user if the input becomes valid,
   // but not if it becomes invalid, as they are not done typing yet.
   async function internalOnInput(event: Event | null) {
-    resizeLongField();
     if (!value) return;
     value = formatting(value, event);
     const res = await validation(value);
@@ -101,18 +99,6 @@
       internalOnChange(null);
     })(validation);
   });
-
-  // Automatic height
-  onMount(() => setTimeout(resizeLongField, 10));
-
-  function resizeLongField() {
-    if (!multiline || !element) return;
-    const heightBefore = element.getBoundingClientRect().height
-    element.style.height = "auto";
-    element.style.height = `${element.scrollHeight}px`
-    const heightAfter = element.getBoundingClientRect().height
-    if (heightAfter < heightBefore) resizeLongField();
-  }
 
   // Copy text
   function copy() {
@@ -168,6 +154,7 @@
     word-wrap: break-word;
     overflow-y: hidden;
     min-height: text.$fontSize;
+    field-sizing: content;
   }
 
   div.wrapper.mono > input, div.wrapper.mono > textarea {
