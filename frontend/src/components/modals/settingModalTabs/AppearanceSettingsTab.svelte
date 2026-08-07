@@ -7,14 +7,12 @@
   import ToggleInput from "../../forms/ToggleInput.svelte";
   import SectionDivider from "../../layout/SectionDivider.svelte";
   import { number, t } from "@sveltia/i18n";
-  import { loadLanguage } from "$lib/common/i18n";
 
   interface Props {
     settings: Settings;
     lightThemes: Option<string>[];
     darkThemes: Option<string>[];
     fonts: Option<string>[];
-    languages: Option<string>[];
   }
 
   let {
@@ -22,7 +20,6 @@
     lightThemes,
     darkThemes,
     fonts,
-    languages,
   }: Props = $props();
 </script>
 
@@ -74,13 +71,6 @@
   ]}
 />
 <SectionDivider title={t("settings.appearance.site.subtitle")}/>
-<SelectInput
-  name={UserSettingKeys.Language}
-  placeholder={t("settings.appearance.site.language")}
-  bind:value={settings.userSettings[UserSettingKeys.Language]}
-  options={languages}
-  click={(l) => { loadLanguage(l) }}
-/>
 <ToggleInput
   name={UserSettingKeys.AppearenceFrostedGlass}
   description={t("settings.appearance.site.frosted")}

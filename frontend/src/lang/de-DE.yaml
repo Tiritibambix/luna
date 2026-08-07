@@ -491,7 +491,6 @@ settings:
         first: "Erster Wochentag"
     site:
       subtitle: "Seitendarstellung"
-      language: "Sprache"
       frosted: "Durchscheinende Fenster"
       rounded: "Abgerundete Ecken"
       buttons: "Verwende Textknöpfe"
@@ -512,6 +511,9 @@ settings:
         main: "Kalender animieren"
         small: "Kleinen Kalendar animieren"
       month: "Monatsauswahl animieren"
+  language:
+    title: "Sprache"
+    display: "Anzeigesprache"
   dev:
     title: "Entwickler"
     deauthorize: "Authorisierung entnehmen"

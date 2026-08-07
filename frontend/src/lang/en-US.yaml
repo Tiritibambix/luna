@@ -489,7 +489,6 @@ settings:
         first: "First day of the week"
     site:
       subtitle: "Site Appearance"
-      language: "Language"
       frosted: "Translucent windows"
       rounded: "Rounded corners"
       buttons: "Use textual buttons"
@@ -510,6 +509,9 @@ settings:
         main: "Animate calendar"
         small: "Animate small calendar"
       month: "Animate month selection"
+  language:
+    title: "Language"
+    display: "Display Language"
   dev:
     title: "Developer"
     deauthorize: "Deauthorize"

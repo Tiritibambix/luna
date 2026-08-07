@@ -495,7 +495,6 @@ settings:
         first: "Pierwszy dzień tygodnia"
     site:
       subtitle: "Wygląd Strony"
-      language: "Język"
       frosted: "Prześwitujące okna"
       rounded: "Zaokrąglone rogi"
       buttons: "Używaj przycisków tekstowych"
@@ -516,6 +515,9 @@ settings:
         main: "Animuj kalendarz"
         small: "Animuj mały kalendarz"
       month: "Animuj wybór miesiąca"
+  language:
+    title: Język
+    display: Język Wyświetlania
   dev:
     title: "Programista"
     deauthorize: "Odbierz zezwolenia"

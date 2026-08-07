@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Archive, CaseSensitive, Check, Code, Lock, LogOut, Moon, Palette, RefreshCw, Shield, Sun, TriangleAlert, User, Users, X } from "lucide-svelte";
+  import { Archive, CaseSensitive, Check, Code, Languages, Lock, LogOut, Moon, Palette, RefreshCw, Shield, Sun, TriangleAlert, User, Users, X } from "lucide-svelte";
   import { AsyncNoOp, NoOp } from "../../lib/client/placeholders";
   import ButtonList from "../forms/ButtonList.svelte";
   import Modal from "./Modal.svelte";
@@ -34,6 +34,7 @@
   import { locale, locales, t } from "@sveltia/i18n";
   import { getDefaultLanguage, loadLanguage } from "$lib/common/i18n";
   import BackupsSettingsTab from "./settingModalTabs/BackupsSettingsTab.svelte";
+  import LanguageSettingsTab from "./settingModalTabs/LanguageSettingsTab.svelte";
 
   interface Props {
     showModal: () => void;
@@ -95,6 +96,7 @@
     [
       { name: t("settings.account.title"), value: "account", icon: User },
       { name: t("settings.appearance.title"), value: "appearance", icon: Palette },
+      { name: t("settings.language.title"), value: "language", icon: Languages },
       { name: t("settings.dev.title"), value: "developer", icon: Code }
     ],
     [
@@ -114,6 +116,7 @@
     [
       { name: t("settings.account.title"), value: "account", icon: User },
       { name: t("settings.appearance.title"), value: "appearance", icon: Palette },
+      { name: t("settings.language.title"), value: "language", icon: Languages },
       { name: t("settings.dev.title"), value: "developer", icon: Code }
     ],
     [
@@ -523,7 +526,11 @@
           lightThemes={lightThemes}
           darkThemes={darkThemes}
           fonts={fonts} 
-          languages={languages}
+        />
+      {:else if selectedCategory === "language"}
+        <LanguageSettingsTab
+          settings={settings}
+          languages={languages} 
         />
       {:else if selectedCategory === "developer"}
         <DeveloperSettingsTab
