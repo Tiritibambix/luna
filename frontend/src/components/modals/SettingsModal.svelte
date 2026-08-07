@@ -196,7 +196,7 @@
 
   let languageNames = $derived(Object.fromEntries(locales.map(x => [x, getLanguageName(x, x)])));
   let defaultLanguage = await getDefaultLanguage();
-  let defaultLanguageOption = $derived({ name: t("language.default", { values: { default: languageNames[defaultLanguage] } }), value: "default" });
+  let defaultLanguageOption = $derived({ name: t("settings.language.default", { values: { default: languageNames[defaultLanguage] } }), value: "default" });
   let languages = $derived<Option<string>[]>(
     [defaultLanguageOption]
       .concat(

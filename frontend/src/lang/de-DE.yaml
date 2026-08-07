@@ -2,9 +2,6 @@ branding:
   name: "Luna"
   copyright: "Copyright © 2026 Kacper Darowski (Opisek)\nLizenziert unter TBD"
 
-language:
-  default: "Browsereinstellung ({$default})"
-
 button:
   settings: "Einstellungen"
   add:
@@ -514,6 +511,7 @@ settings:
   language:
     title: "Sprache"
     display: "Anzeigesprache"
+    default: "Browsereinstellung ({$default})"
   dev:
     title: "Entwickler"
     deauthorize: "Authorisierung entnehmen"

@@ -2,9 +2,6 @@ branding:
   name: "Luna"
   copyright: "Copyright © 2026 Kacper Darowski (Opisek)\Na licencji TBD"
 
-language:
-  default: "Domyślny ({$default})"
-
 button:
   settings: "Ustawienia"
   add:
@@ -518,6 +515,7 @@ settings:
   language:
     title: Język
     display: Język Wyświetlania
+    default: "Domyślny ({$default})"
   dev:
     title: "Programista"
     deauthorize: "Odbierz zezwolenia"

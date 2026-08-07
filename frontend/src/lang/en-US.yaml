@@ -2,9 +2,6 @@ branding:
   name: "Luna"
   copyright: "Copyright © 2026 Kacper Darowski (Opisek)\nLicensed under TBD"
 
-language:
-  default: "Default ({$default})"
-
 button:
   settings: "Settings"
   add:
@@ -512,6 +509,7 @@ settings:
   language:
     title: "Language"
     display: "Display Language"
+    default: "Default ({$default})"
   dev:
     title: "Developer"
     deauthorize: "Deauthorize"
