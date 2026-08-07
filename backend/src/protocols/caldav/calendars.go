@@ -265,12 +265,49 @@ func (calendar *CaldavCalendar) GetEvent(settings types.EventSettings, q types.D
 			Append(errors.LvlBroad, "Could not get event")
 	}
 
+	// Find the referred recurrence instance
+	var master types.Event
 	for _, event := range events {
-		if event.GetSettings().(*CaldavEventSettings).RecurrenceId == caldavSettings.RecurrenceId {
+		currentRecurrenceId := event.GetSettings().(*CaldavEventSettings).RecurrenceId
+		if currentRecurrenceId == caldavSettings.RecurrenceId {
 			return event, nil
+		}
+		if len(currentRecurrenceId) == 0 {
+			master = event
 		}
 	}
 
+	// If the specific recurrence ID was not found, but the master event is present, expand the recurrence to a matching id
+	if master != nil {
+		// Since recurrence IDs refer to the start date of the event instance, we can easily compute bounds for the expansion
+		parsedTime, err := types.ParseIcalTimestampAtLocation(caldavSettings.RecurrenceId, master.GetDate().Timezone())
+		if err != nil {
+			return nil, errors.New().Status(http.StatusInternalServerError).
+				AddErr(errors.LvlDebug, err).
+				Append(errors.LvlWordy, "Invalid recurrence ID %s for event %s", caldavSettings.RecurrenceId, master.GetId()).
+				AltStr(errors.LvlWordy, "Invalid recurrence ID").
+				Append(errors.LvlBroad, "Could not get event")
+		}
+
+		// Search for the instance using its recurrence ID
+		end := parsedTime.Add(1 * time.Minute)
+		expanded, tr := types.ExpandRecurrence(master, parsedTime, &end)
+		if tr != nil {
+			return nil, errors.New().Status(http.StatusInternalServerError).
+				AddErr(errors.LvlDebug, err).
+				AltStr(errors.LvlWordy, "Could not expand recurrence to derive event instance").
+				Append(errors.LvlBroad, "Could not get event")
+		}
+
+		// Check if the expansion includes the instance
+		for _, event := range expanded {
+			if event.GetSettings().(*CaldavEventSettings).RecurrenceId == caldavSettings.RecurrenceId {
+				return event, nil
+			}
+		}
+	}
+
+	// Error if not found
 	return nil, errors.New().Status(http.StatusInternalServerError).
 		Append(errors.LvlDebug, "The returned collection from %s did not contain a matching recurrence ID %s", caldavSettings.Url.Path, caldavSettings.RecurrenceId).
 		AltStr(errors.LvlWordy, "The returned collection did not contain a matching recurrence ID").

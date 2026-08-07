@@ -407,6 +407,21 @@ func EventRecurrenceFromLines(lines []string) (*EventRecurrence, error) {
 	}, nil
 }
 
+func ParseIcalTimestampAtLocation(timestamp string, location *time.Location) (*time.Time, error) {
+	if strings.HasSuffix(timestamp, "Z") {
+		location = time.UTC
+	}
+
+	for _, format := range FormatsRfc5545 {
+		parsedTime, err := time.ParseInLocation(format, timestamp, location)
+		if err == nil {
+			return &parsedTime, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not parse timestamp %v", timestamp)
+}
+
 func ParseIcalTime(icalTime *ical.Prop) (*time.Time, *time.Location, error) {
 	if icalTime == nil || icalTime.Value == "" {
 		return nil, nil, fmt.Errorf("time property is nil or empty")
@@ -429,14 +444,12 @@ func ParseIcalTime(icalTime *ical.Prop) (*time.Time, *time.Location, error) {
 		return nil, nil, fmt.Errorf("could not parse timezone location %v: %v", tzid, err)
 	}
 
-	for _, format := range FormatsRfc5545 {
-		parsedTime, err := time.ParseInLocation(format, icalTime.Value, location)
-		if err == nil {
-			return &parsedTime, location, nil
-		}
+	time, err := ParseIcalTimestampAtLocation(icalTime.Value, location)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not parse timestamp %v", icalTime.Value)
 	}
 
-	return nil, nil, fmt.Errorf("could not parse timestamp %v", icalTime.Value)
+	return time, location, nil
 }
 
 func SerializeIcalTime(time *time.Time, allDay bool, utc bool) string {
