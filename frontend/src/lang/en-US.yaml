@@ -4,11 +4,6 @@ branding:
 
 language:
   default: "Default ({$default})"
-  en-US: "English (US)"
-  en-DE: "English (EU)"
-  en-GB: "English (UK)"
-  de-DE: "Deutsch"
-  pl-PL: "Polski"
 
 button:
   settings: "Settings"

@@ -31,7 +31,7 @@
   import { getDatabaseFileIdFromUrl } from "../../lib/common/parsing";
   import OauthSettingsTab from "./settingModalTabs/OauthSettingsTab.svelte";
   import { getOauthClients } from "../../lib/client/data/oauth.svelte";
-  import { locales, t } from "@sveltia/i18n";
+  import { locale, locales, t } from "@sveltia/i18n";
   import { getDefaultLanguage, loadLanguage } from "$lib/common/i18n";
   import BackupsSettingsTab from "./settingModalTabs/BackupsSettingsTab.svelte";
 
@@ -137,9 +137,6 @@
     { name: "Atkinson Hyperlegible Next", value: "atkinson-hyperlegible-next" },
     { name: "Atkinson Hyperlegible Mono", value: "atkinson-hyperlegible-next" }
   ]);
-  let defaultLanguageName = t(`language.${await getDefaultLanguage()}`);
-  let defaultLanguageOption = $derived({ name: t("language.default", { values: { default: defaultLanguageName} }), value: "default" });
-  let languages = $derived<Option<string>[]>([defaultLanguageOption].concat(locales.map(x => ({ name: t(`language.${x}`), value: x})).toSorted((a, b) => a.name.localeCompare(b.name))));
 
   function formatInstalledFile(icon: any = null): (rawName: string) => Option<string> {
     return (rawName: string): Option<string> => {
@@ -167,6 +164,45 @@
       queueNotification(ColorKeys.Danger, t("fonts.error.fetch", { values: { msg: err }}));
     });
   }
+
+  // Languages
+
+  let localesMap = $derived.by(() => {
+    const localesMap = new Map<string, string[]>();
+    locales.forEach(x => {
+      const parts = x.split("-");
+      const previous = localesMap.getOrInsert(parts[0], []);
+      localesMap.set(parts[0], previous.concat([parts[1]]))
+    })
+    return localesMap;
+  });
+
+  function getLanguageName(languageLocale: string, targetLocale: string) {
+    const parts = languageLocale.split("-");
+    const isUnique = (localesMap.get(parts[0])?.length || 0) <= 1;
+
+    const language = (new Intl.DisplayNames([ targetLocale ], { type: "language" } )).of(parts[0]);
+
+    if (!language) return languageLocale;
+    if (isUnique) return language;
+
+    const region = (new Intl.DisplayNames([ targetLocale ], { type: "region" } )).of(parts[1]);
+
+    return `${language} (${region})`;
+  }
+
+  let languageNames = $derived(Object.fromEntries(locales.map(x => [x, getLanguageName(x, x)])));
+  let defaultLanguage = await getDefaultLanguage();
+  let defaultLanguageOption = $derived({ name: t("language.default", { values: { default: languageNames[defaultLanguage] } }), value: "default" });
+  let languages = $derived<Option<string>[]>(
+    [defaultLanguageOption]
+      .concat(
+        Object
+          .entries(languageNames)
+          .map(x => ({ name: x[1], value: x[0]}) )
+          .toSorted((a, b) => a.name.localeCompare(b.name))
+      )
+  );
 
   // Static data change tracking
   let userDataSnapshot = $state<UserData | null>(null);
