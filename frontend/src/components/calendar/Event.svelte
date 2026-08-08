@@ -212,7 +212,7 @@
     id={id}
     style="
       background-color:{mouseCalendarInteraction.hoveredEvent == event.id ? GetEventHoverColor(event) : GetEventColor(event)};
-      width: calc({(showOnlyCircle ? 1 : remainingDaysThisWeek) * 100}% - {((isEventStart ? 1 : 0) + (eventEndsThisWeek ? 1 : 0)) * (showOnlyCircle ? 0 : 1)} * var(--gapBetweenDays));
+      width: calc({(showOnlyCircle ? 1 : remainingDaysThisWeek) * 100}% - {((isEventStart ? 1 : 0) + (eventEndsThisWeek ? 1 : 0)) * (showOnlyCircle ? 0 : 1)} * var(--gapBetweenDays) - {showOnlyCircle ? 2 : 0} * var(--gapBetweenDays));
       z-index: {16 - getDayIndex(date)};
       anchor-name: --anchor-{id};
     "
