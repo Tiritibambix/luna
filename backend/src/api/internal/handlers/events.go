@@ -398,7 +398,7 @@ func DeleteEvent(c *gin.Context, query *struct {
 		}
 
 		// Delete event entry from the database
-		err = u.Tx.Queries().DeleteEvent(userId, *parentEvent.GetParentId())
+		err = u.Tx.Queries().DeleteEvent(userId, parentEvent.GetId())
 		if err != nil {
 			u.Error(err)
 			return
