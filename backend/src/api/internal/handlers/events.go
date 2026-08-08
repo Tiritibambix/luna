@@ -356,7 +356,7 @@ func DeleteEvent(c *gin.Context, query *struct {
 
 	var parentEvent types.Event
 	if event.GetParentId() != nil {
-		parentEvent, err = u.Tx.Queries().GetEvent(userId, eventId, u.Context, u.Config)
+		parentEvent, err = u.Tx.Queries().GetEvent(userId, *event.GetParentId(), u.Context, u.Config)
 		if err != nil {
 			u.Error(err)
 			return
@@ -373,13 +373,6 @@ func DeleteEvent(c *gin.Context, query *struct {
 	switch query.Affect {
 	case "this":
 		// Removing just one instance of a recurrence equates to adding that event to EXDATE
-		if parentEvent == nil {
-			u.Error(errors.New().Status(http.StatusInternalServerError).
-				Append(errors.LvlWordy, "Could not find parent event").
-				AltStr(errors.LvlDebug, "Could not find parent event of %v", event.GetId()),
-			)
-			return
-		}
 		parentEvent.GetDate().Recurrence().AddException(event.GetDate().Start())
 		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, parentEvent.GetName(), parentEvent.GetDesc(), parentEvent.GetColor(), parentEvent.GetDate(), false, u.Tx.Queries())
 		if err != nil {
@@ -387,6 +380,15 @@ func DeleteEvent(c *gin.Context, query *struct {
 			return
 		}
 	case "thisandfuture":
+		// Removing just one instance of a recurrence equates to changing the recurrence end date
+		ruleSet := parentEvent.GetDate().Recurrence().RuleSet()
+		ruleSet.GetRRule().Options.Until = event.GetDate().Start().Add(-time.Second)
+		parentEvent.GetDate().Recurrence().SetRuleSet(ruleSet)
+		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, parentEvent.GetName(), parentEvent.GetDesc(), parentEvent.GetColor(), parentEvent.GetDate(), false, u.Tx.Queries())
+		if err != nil {
+			u.Error(err)
+			return
+		}
 	case "all":
 		// Remove the event from the upstream source
 		err = parentEvent.GetCalendar().DeleteEvent(parentEvent, u.Tx.Queries())

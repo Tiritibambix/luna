@@ -201,7 +201,7 @@ func (ed *EventDate) Clone() *EventDate {
 
 // RFC-5545 3.3.10, 3.8.5.3
 type EventRecurrence struct {
-	ruleSet           *rrule.Set // TODO: change to rruleset?
+	ruleSet           *rrule.Set
 	modifiedInstances []time.Time
 	allDay            bool
 	timezone          *time.Location
@@ -241,6 +241,10 @@ func (er *EventRecurrence) RuleSet() *rrule.Set {
 		ruleSet.ExDate(date)
 	}
 	return &ruleSet
+}
+
+func (er *EventRecurrence) SetRuleSet(ruleSet *rrule.Set) {
+	er.ruleSet = ruleSet
 }
 
 func (er *EventRecurrence) EffectiveRuleSet() *rrule.Set {
