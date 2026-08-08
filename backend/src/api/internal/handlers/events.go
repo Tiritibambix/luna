@@ -181,24 +181,26 @@ func GetEvent(c *gin.Context) {
 }
 
 func PutEvent(c *gin.Context, body *struct {
-	Name     string         `json:"name" form:"name" binding:"required,alphanumunicode"`
-	Desc     string         `json:"desc" form:"desc" binding:"omitempty,alphanumunicode"`
+	Name     string         `json:"name" form:"name" binding:"required"`
+	Desc     string         `json:"desc" form:"desc" binding:"omitempty"`
 	Color    types.Color    `json:"color" form:"color" binding:"required"`
 	AllDay   bool           `json:"date.all_day" form:"date_all_day"`
 	Start    time.Time      `json:"date.start" form:"date_start" binding:"required"`
 	End      *time.Time     `json:"date.end" form:"date_end"`
 	Duration *time.Duration `json:"date.duration" form:"date_duration"`
+	Rrule    *string        `json:"date.rrule" form:"date_rrule"`
+	Rdate    *string        `json:"date.rdate" form:"date_rdate"`
+	Exdate   *string        `json:"date.exdate" form:"date_exdate"`
 }) {
 	u := util.GetUtil(c)
-
 	userId := util.GetUserId(c)
 
+	// Find the associated calendar
 	calendarId, tr := util.GetId(c, "calendar")
 	if tr != nil {
 		u.Error(tr)
 		return
 	}
-
 	calendar, tr := cache.GetCached(u.Config.Cache, userId, calendarId, u.Context, func() (types.Calendar, *errors.ErrorTrace) {
 		return u.Tx.Queries().GetCalendar(userId, calendarId, u.Context, u.Config)
 	})
@@ -207,6 +209,7 @@ func PutEvent(c *gin.Context, body *struct {
 		return
 	}
 
+	// Event date
 	var date *types.EventDate
 	if body.End == nil && body.Duration == nil {
 		u.Error(errors.New().Status(http.StatusBadRequest).
@@ -222,12 +225,37 @@ func PutEvent(c *gin.Context, body *struct {
 		date = types.NewEventDateFromDuration(&body.Start, body.Duration, body.AllDay, nil)
 	}
 
+	// Event recurrence
+	rrule := ""
+	if body.Rrule != nil {
+		rrule = *body.Rrule
+	}
+	rdate := ""
+	if body.Rdate != nil {
+		rdate = *body.Rdate
+	}
+	exdate := ""
+	if body.Exdate != nil {
+		exdate = *body.Exdate
+	}
+	recurrence, err := types.EventRecurrenceFromStrings(rrule, rdate, exdate)
+	if err != nil {
+		u.Error(errors.New().Status(http.StatusBadRequest).
+			AddErr(errors.LvlDebug, err).
+			Append(errors.LvlWordy, "Invalid recurrence").
+			AltStr(errors.LvlPlain, "Invalid date"),
+		)
+	}
+	date.SetRecurrence(recurrence)
+
+	// Add the event in the upstream
 	event, tr := calendar.AddEvent(body.Name, body.Desc, &body.Color, date, u.Tx.Queries())
 	if tr != nil {
 		u.Error(tr)
 		return
 	}
 
+	// Insert the event into the database
 	tr = u.Tx.Queries().InsertEvent(event)
 	if tr != nil {
 		u.Error(tr)
@@ -238,8 +266,8 @@ func PutEvent(c *gin.Context, body *struct {
 }
 
 func PatchEvent(c *gin.Context, body *struct {
-	Name       *string        `json:"name" form:"name" binding:"omitempty,alphanumunicode"`
-	Desc       *string        `json:"desc" form:"desc" binding:"omitempty,alphanumunicode"`
+	Name       *string        `json:"name" form:"name" binding:"omitempty"`
+	Desc       *string        `json:"desc" form:"desc" binding:"omitempty"`
 	Color      *types.Color   `json:"color" form:"color"`
 	AllDay     *bool          `json:"date.all_day" form:"date_all_day"`
 	Start      *time.Time     `json:"date.start" form:"date_start"`
@@ -266,18 +294,6 @@ func PatchEvent(c *gin.Context, body *struct {
 	if tr != nil {
 		u.Error(tr)
 		return
-	}
-
-	if body.Name != nil {
-		event.SetName(*body.Name)
-	}
-
-	if body.Desc != nil {
-		event.SetName(*body.Desc)
-	}
-
-	if body.Color != nil {
-		event.SetColor(body.Color)
 	}
 
 	var newEventDate *types.EventDate
@@ -325,10 +341,92 @@ func PatchEvent(c *gin.Context, body *struct {
 	}
 	newEventDate.SetRecurrence(recurrence)
 
-	_, tr = event.GetCalendar().EditEvent(event, event.GetName(), event.GetDesc(), event.GetColor(), event.GetDate(), body.Overridden, u.Tx.Queries())
-	if tr != nil {
-		u.Error(tr)
-		return
+	// If the event does not repeat, we automatically affect "all" instances
+	if !event.GetDate().Recurrence().Repeats() {
+		query.Affect = "all"
+	}
+
+	// Get parent event if needed
+	var parentEvent types.Event
+	if event.GetParentId() != nil && query.Affect != "this" {
+		parentEvent, tr = u.Tx.Queries().GetEvent(userId, *event.GetParentId(), u.Context, u.Config)
+		if tr != nil {
+			u.Error(tr)
+			return
+		}
+	} else {
+		parentEvent = event
+		if query.Affect == "thisandfuture" {
+			query.Affect = "all"
+		}
+	}
+
+	switch query.Affect {
+	case "this":
+		// Editing just one instance
+		_, tr = event.GetCalendar().EditEvent(event, body.Name, body.Desc, body.Color, newEventDate, body.Overridden, u.Tx.Queries())
+		if tr != nil {
+			u.Error(tr)
+			return
+		}
+	case "thisandfuture":
+		// Editing this and future instances means we transform this event into a master event and shorten the original one
+		if newEventDate.Recurrence().Repeats() {
+			ruleSet := parentEvent.GetDate().Recurrence().RuleSet()
+			ruleSet.GetRRule().Options.Dtstart = parentEvent.GetDate().Recurrence().RuleSet().GetDTStart()
+			parentEvent.GetDate().Recurrence().SetRuleSet(ruleSet)
+		}
+		if body.Name != nil {
+			event.SetName(*body.Name)
+		}
+		if body.Desc != nil {
+			event.SetDesc(*body.Desc)
+		}
+		if body.Color != nil {
+			event.SetColor(body.Color)
+		}
+		event, tr := event.GetCalendar().AddEvent(event.GetName(), event.GetDesc(), event.GetColor(), newEventDate, u.Tx.Queries())
+		if tr != nil {
+			u.Error(tr)
+			return
+		}
+
+		tr = u.Tx.Queries().InsertEvent(event)
+		if tr != nil {
+			u.Error(tr)
+			return
+		}
+
+		ruleSet := parentEvent.GetDate().Recurrence().RuleSet()
+		ruleSet.GetRRule().Options.Until = event.GetDate().Start().Add(-time.Second)
+		parentEvent.GetDate().Recurrence().SetRuleSet(ruleSet)
+		_, tr = parentEvent.GetCalendar().EditEvent(parentEvent, nil, nil, nil, parentEvent.GetDate(), false, u.Tx.Queries())
+		if tr != nil {
+			u.Error(tr)
+			return
+		}
+	case "all":
+		// Editing all instances = editing parent event
+
+		// If we edit all events, we have to be careful about how we treat changes to the time
+		if parentEvent.GetId() != eventId {
+			// First, get the relative shift in start/end timestamps
+			deltaStart := newEventDate.Start().Sub(*event.GetDate().Start())
+			deltaEnd := newEventDate.End().Sub(*event.GetDate().End())
+
+			// Use these offsets to calculate when the master event should starte
+			newStart := parentEvent.GetDate().Start().Add(deltaStart)
+			newEnd := parentEvent.GetDate().End().Add(deltaEnd)
+			newEventDate.SetStart(&newStart)
+			newEventDate.SetEnd(&newEnd)
+		}
+
+		// Edit parent event
+		_, tr = parentEvent.GetCalendar().EditEvent(parentEvent, body.Name, body.Desc, body.Color, newEventDate, body.Overridden, u.Tx.Queries())
+		if tr != nil {
+			u.Error(tr)
+			return
+		}
 	}
 
 	u.Success(nil)
@@ -374,17 +472,18 @@ func DeleteEvent(c *gin.Context, query *struct {
 	case "this":
 		// Removing just one instance of a recurrence equates to adding that event to EXDATE
 		parentEvent.GetDate().Recurrence().AddException(event.GetDate().Start())
-		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, parentEvent.GetName(), parentEvent.GetDesc(), parentEvent.GetColor(), parentEvent.GetDate(), false, u.Tx.Queries())
+		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, nil, nil, nil, parentEvent.GetDate(), false, u.Tx.Queries())
 		if err != nil {
 			u.Error(err)
 			return
 		}
+		// TODO: In CalDav we also need to delete the VEVENT of that instance so its information is forgotten when we later add it back
 	case "thisandfuture":
 		// Removing just one instance of a recurrence equates to changing the recurrence end date
 		ruleSet := parentEvent.GetDate().Recurrence().RuleSet()
 		ruleSet.GetRRule().Options.Until = event.GetDate().Start().Add(-time.Second)
 		parentEvent.GetDate().Recurrence().SetRuleSet(ruleSet)
-		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, parentEvent.GetName(), parentEvent.GetDesc(), parentEvent.GetColor(), parentEvent.GetDate(), false, u.Tx.Queries())
+		_, err = parentEvent.GetCalendar().EditEvent(parentEvent, nil, nil, nil, parentEvent.GetDate(), false, u.Tx.Queries())
 		if err != nil {
 			u.Error(err)
 			return

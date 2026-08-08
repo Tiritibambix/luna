@@ -311,17 +311,17 @@ func (q *Queries) DeleteEvent(userId types.ID, eventId types.ID) *errors.ErrorTr
 	}
 }
 
-func (q *Queries) SetEventOverrides(eventId types.ID, name string, desc string, color *types.Color) *errors.ErrorTrace {
+func (q *Queries) SetEventOverrides(eventId types.ID, name *string, desc *string, color *types.Color) *errors.ErrorTrace {
 	columns := []string{}
 	params := []any{eventId.UUID(), false}
 
-	if name != "" {
+	if name != nil {
 		columns = append(columns, "title")
-		params = append(params, name)
+		params = append(params, *name)
 	}
-	if desc != "" {
+	if desc != nil {
 		columns = append(columns, "description")
-		params = append(params, desc)
+		params = append(params, *desc)
 	}
 	if color != nil {
 		columns = append(columns, "color")

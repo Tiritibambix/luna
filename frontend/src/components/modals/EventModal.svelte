@@ -153,7 +153,7 @@
     });
   };
   const onEdit = async () => {
-    const affect = originalEvent.date.recurrence != undefined ? await selectAffectedRecurrences(true).catch(() => { throw new Error("Cancelled"); }) : "this";
+    const affect = (event.id !== "" && originalEvent.date.recurrence != undefined) ? await selectAffectedRecurrences(true).catch(() => { throw new Error("Cancelled"); }) : "this";
 
     event.date.recurrence = eventRepeats ? {
       RRULE: `RRULE:${RRule.optionsToString(eventRecurrenceRruleOptions).split("RRULE:")[1]}`,
@@ -173,7 +173,7 @@
         name: event.name != originalEvent.name,
         desc: event.desc != originalEvent.desc,
         color: event.color != originalEvent.color,
-        date: !deepEquality(event.date, originalEvent.date)
+        date: !deepEquality(event.date, originalEvent.date) // TODO: this needs to be fixed!
       };
       return await getRepository().editEvent(event, changes, eventSourceType === "ical", affect).then(() => event).catch(err => {
         throw new Error(t("event.error.edit", { values: { name: event.name, msg: err.message } }));
@@ -183,6 +183,7 @@
         throw new Error(t("event.error.move", { values: { name: event.name, msg: err.message } }));
       });
     }
+    // TODO: after editing/deleting recurring events with affect != "this", we have to refetch from this calendar, because the frontend does not try to make assumptions about what other events are affected
   };
   const resetOverrides = async () => {
     event.overridden = false;

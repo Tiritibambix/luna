@@ -314,14 +314,22 @@ func (calendar *CaldavCalendar) GetEvent(settings types.EventSettings, q types.D
 		Append(errors.LvlBroad, "Could not get event")
 }
 
-func setEventProps(cal *ical.Calendar, id string, name string, desc string, color *types.Color, date *types.EventDate) *errors.ErrorTrace {
+func setEventProps(cal *ical.Calendar, id string, name *string, desc *string, color *types.Color, date *types.EventDate, recurrenceId string) *errors.ErrorTrace {
 	var event *ical.Event = nil
 	for _, child := range cal.Children {
-		if child.Name == "VEVENT" {
-			event = ical.NewEvent()
-			event.Component = child
-			break
+		if child.Name != "VEVENT" {
+			continue
 		}
+
+		currentRecurrenceId := child.Props.Get(ical.PropRecurrenceID)
+
+		if (currentRecurrenceId == nil && len(recurrenceId) != 0) || (currentRecurrenceId != nil && currentRecurrenceId.Value != recurrenceId) {
+			continue
+		}
+
+		event = ical.NewEvent()
+		event.Component = child
+		break
 	}
 	if event == nil {
 		event = ical.NewEvent()
@@ -330,12 +338,16 @@ func setEventProps(cal *ical.Calendar, id string, name string, desc string, colo
 
 	event.Props.SetText(ical.PropUID, id)
 
-	event.Props.SetText(ical.PropSummary, common.EscapeIcalString(name))
+	if name != nil {
+		event.Props.SetText(ical.PropSummary, common.EscapeIcalString(*name))
+	}
 
-	if desc != "" {
-		event.Props.SetText(ical.PropDescription, common.EscapeIcalString(desc))
-	} else {
-		event.Props.Del(ical.PropDescription)
+	if desc != nil {
+		if len(*desc) != 0 {
+			event.Props.SetText(ical.PropDescription, common.EscapeIcalString(*desc))
+		} else {
+			event.Props.Del(ical.PropDescription)
+		}
 	}
 
 	if color.IsEmpty() {
@@ -401,6 +413,17 @@ func setEventProps(cal *ical.Calendar, id string, name string, desc string, colo
 		}
 	}
 
+	if len(recurrenceId) != 0 {
+		parsedRecurrenceId, err := types.ParseIcalTimestampAtLocation(recurrenceId, date.Timezone())
+		if err != nil {
+			return errors.New().Status(http.StatusInternalServerError).
+				Append(errors.LvlDebug, "Could not parse recurrence ID %s", recurrenceId).
+				AltStr(errors.LvlWordy, "Could not parse recurrence ID").
+				Append(errors.LvlBroad, "Could not edit event")
+		}
+		event.Props.SetDateTime(ical.PropRecurrenceID, *parsedRecurrenceId)
+	}
+
 	timestamp := time.Now()
 	event.Props.SetDateTime(ical.PropDateTimeStamp, timestamp)
 	//event.Props.SetDateTime(util.PropTimestamp, timestamp)
@@ -415,7 +438,7 @@ func (calendar *CaldavCalendar) AddEvent(name string, desc string, color *types.
 	id := types.RandomId()
 	cal := ical.NewCalendar()
 
-	tr := setEventProps(cal, id.String(), name, desc, color, date)
+	tr := setEventProps(cal, id.String(), &name, &desc, color, date, "")
 	if tr != nil {
 		return nil, tr.Status(http.StatusBadRequest).
 			Append(errors.LvlWordy, "Could not set iCal properties").
@@ -454,13 +477,15 @@ func (calendar *CaldavCalendar) AddEvent(name string, desc string, color *types.
 	return finishedEvent[0], nil
 }
 
-func (calendar *CaldavCalendar) EditEvent(originalEvent types.Event, name string, desc string, color *types.Color, date *types.EventDate, _ bool, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
+func (calendar *CaldavCalendar) EditEvent(originalEvent types.Event, name *string, desc *string, color *types.Color, date *types.EventDate, _ bool, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
 	originalCaldavEvent := originalEvent.(*CaldavEvent)
-	uid := originalCaldavEvent.GetSettings().(*CaldavEventSettings).Uid
+	originalCaldavSettings := originalCaldavEvent.GetSettings().(*CaldavEventSettings)
+	uid := originalCaldavSettings.Uid
+	recurrenceId := originalCaldavSettings.RecurrenceId
 	originalRawEvent := originalCaldavEvent.settings.rawEvent
 	cal := originalRawEvent.Data
 
-	tr := setEventProps(cal, uid, name, desc, color, date)
+	tr := setEventProps(cal, uid, name, desc, color, date, recurrenceId)
 	if tr != nil {
 		return nil, tr.Status(http.StatusBadRequest).
 			Append(errors.LvlWordy, "Could not set iCal properties").

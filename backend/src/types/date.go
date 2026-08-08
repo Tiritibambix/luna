@@ -488,7 +488,7 @@ func (er EventRecurrence) RruleString() string {
 }
 
 func (er EventRecurrence) RdateString() string {
-	if !er.Repeats() {
+	if !er.Repeats() || len(er.ruleSet.GetRDate()) == 0 {
 		return ""
 	}
 	var valueType string
@@ -501,7 +501,7 @@ func (er EventRecurrence) RdateString() string {
 }
 
 func (er EventRecurrence) ExdateString() string {
-	if !er.Repeats() {
+	if !er.Repeats() || len(er.ruleSet.GetExDate()) == 0 {
 		return ""
 	}
 	var valueType string

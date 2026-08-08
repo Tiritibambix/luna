@@ -225,19 +225,16 @@ func (calendar *IcalCalendar) AddEvent(name string, desc string, color *types.Co
 	return nil, errors.New().Status(http.StatusMethodNotAllowed)
 }
 
-func (calendar *IcalCalendar) EditEvent(event types.Event, name string, desc string, color *types.Color, date *types.EventDate, override bool, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
+func (calendar *IcalCalendar) EditEvent(event types.Event, name *string, desc *string, color *types.Color, date *types.EventDate, override bool, q types.DatabaseQueries) (types.Event, *errors.ErrorTrace) {
 	if override {
 		anyOverrides := false
-		if name != "" {
-			event.SetName(name)
+		if name != nil {
 			anyOverrides = true
 		}
-		if desc != "" {
-			event.SetDesc(desc)
+		if desc != nil {
 			anyOverrides = true
 		}
 		if color != nil && !color.IsEmpty() {
-			event.SetColor(color)
 			anyOverrides = true
 		}
 
