@@ -14,6 +14,7 @@
   import TextInput from "./TextInput.svelte";
   import RadioInput from "./RadioInput.svelte";
   import type { Option } from "../../types/options";
+  import NumberInput from "./NumberInput.svelte";
 
   interface Props {
     options: Partial<Options>;
@@ -511,6 +512,13 @@
     { value: RRule.YEARLY, name: "Yearly" },
   ]
 )} editable={editable} />
+
+<NumberInput
+  placeholder="Interval"
+  name="recurrence_interval"
+  min={1}
+  bind:value={options.interval}
+/>
 
 <!--
 {#if options.freq == RRule.YEARLY}

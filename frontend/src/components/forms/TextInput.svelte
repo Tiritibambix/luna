@@ -6,7 +6,7 @@
   import { focusIndicator } from "$lib/client/decoration";
   import { NoOp } from "../../lib/client/placeholders";
   import IconButton from "../interactive/IconButton.svelte";
-  import { Copy } from "lucide-svelte";
+  import { Copy, Minus, Plus } from "lucide-svelte";
   import { queueNotification } from "../../lib/client/notifications";
   import { ColorKeys } from "../../types/colors";
 
@@ -24,6 +24,7 @@
     editable?: boolean;
     multiline?: boolean;
     password?: boolean;
+    type?: string;
     mono?: boolean;
     displayCopyButton?: boolean;
     label?: boolean;
@@ -42,6 +43,7 @@
     editable = true,
     multiline = false,
     password = false,
+    type = "text",
     mono = false,
     displayCopyButton = false,
     label = true,
@@ -137,6 +139,15 @@
     flex-grow: 1;
     margin: dimensions.$gapSmall 0;
     padding: 0;
+  }
+
+  input::-webkit-inner-spin-button, 
+  input::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+  }
+  input[type=number] {
+    appearance: textfield;
   }
 
   div.wrapper.editable {
@@ -239,8 +250,20 @@
       disabled={!editable}
       class:editable={editable}
       tabindex={editable ? 0 : -1}
-      type="text"
+      type={type}
     />
+  {/if}
+  {#if type === "number"}
+    <IconButton alt={t("button.increment")} onClick={() => {
+      onChange(((Number.parseInt(value || "") || 0) + 1).toString(), null);
+    }}>
+      <Plus size={16}/>
+    </IconButton>
+    <IconButton alt={t("button.decrement")} onClick={() => {
+      onChange(((Number.parseInt(value || "") || 0) - 1).toString(), null);
+    }}>
+      <Minus size={16}/>
+    </IconButton>
   {/if}
   {#if password &&editable}
     <VisibilityToggle bind:visible={passwordVisible} momentary={true} />
@@ -251,8 +274,8 @@
 </div>
 
 {#snippet copyButton()}
-  <IconButton alt={t("button.copy")}>
-    <Copy size={16} onclick={copy}/>
+  <IconButton alt={t("button.copy")} onClick={copy}>
+    <Copy size={16}/>
   </IconButton>
 {/snippet}
 
