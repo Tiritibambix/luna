@@ -140,7 +140,7 @@ recurrence:
       .match $interval
         1 {{Every year on the {$day} of {$month}}}
         2 {{Every other year on the {$day} of {$month}}}
-        * {{Every {$nth} years on the {$day} of {$month}}}
+        * {{Every {$interval} years on the {$day} of {$month}}}
     yearlymonthday: |
       .input {$interval :integer}
       .input {$date :integer}
@@ -160,7 +160,7 @@ recurrence:
       .match $interval
         1 {{Every year on the {$nthrev} {$weekday} of {$month}}}
         2 {{Every other year on the {$nthrev} {$weekday} of {$month}}}
-        * {{Every {$interval} years on the {$nthre} {$weekday} of {$month}}}
+        * {{Every {$interval} years on the {$nthrev} {$weekday} of {$month}}}
     weekly: |
       .input {$interval :integer}
       .match $interval
