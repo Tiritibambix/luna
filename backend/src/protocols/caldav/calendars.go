@@ -290,7 +290,7 @@ func (calendar *CaldavCalendar) GetEvent(settings types.EventSettings, q types.D
 		}
 
 		// Search for the instance using its recurrence ID
-		end := parsedTime.Add(1 * time.Minute)
+		end := parsedTime.Add(24 * time.Hour)
 		expanded, tr := types.ExpandRecurrence(master, parsedTime, &end)
 		if tr != nil {
 			return nil, errors.New().Status(http.StatusInternalServerError).
