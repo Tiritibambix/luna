@@ -248,7 +248,7 @@ recurrence:
         expand:
           enable: "Specify minute(s) of the hour"
           name: "Minutes of the hour"
-      seconds:
+      second:
         limit:
           enable: "Only during specific seconds of the minute"
           name: "Seconds of the minute"
