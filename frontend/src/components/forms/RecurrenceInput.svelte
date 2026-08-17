@@ -13,10 +13,10 @@
   import SelectInputMulti from "./SelectInputMulti.svelte";
   import TextInput from "./TextInput.svelte";
   import RadioInput from "./RadioInput.svelte";
-  import RecurrenceRuleModal from "../modals/RecurrenceRuleModal.svelte";
+  import type { Option } from "../../types/options";
 
   interface Props {
-    options: Options;
+    options: Partial<Options>;
     dtstart: Date;
     allDay: boolean;
     editable: boolean;
@@ -54,19 +54,19 @@
 
   let byValsSemantics = $derived({
     byMonthLimit: options.freq != RRule.YEARLY,
-    byYearDayLimit: [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY].includes(options.freq),
-    byMonthDayLimit: [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY, RRule.DAILY].includes(options.freq),
-    byDayLimit: [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY, RRule.DAILY].includes(options.freq) || (options.freq == RRule.MONTHLY && byValsEnabled.byMonthDayExpand) || (options.freq == RRule.YEARLY && (byValsEnabled.byYearDayExpand || byValsEnabled.byMonthDayExpand)),
-    byHourLimit: !allDay && [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY].includes(options.freq),
-    byMinuteLimit: !allDay && [RRule.SECONDLY, RRule.MINUTELY].includes(options.freq),
-    bySecondLimit: !allDay && [RRule.SECONDLY].includes(options.freq),
+    byYearDayLimit: options.freq !== undefined && [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY].includes(options.freq),
+    byMonthDayLimit: options.freq !== undefined && [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY, RRule.DAILY].includes(options.freq),
+    byDayLimit: options.freq !== undefined && [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY, RRule.DAILY].includes(options.freq) || (options.freq == RRule.MONTHLY && byValsEnabled.byMonthDayExpand) || (options.freq == RRule.YEARLY && (byValsEnabled.byYearDayExpand || byValsEnabled.byMonthDayExpand)),
+    byHourLimit: !allDay && options.freq !== undefined && [RRule.SECONDLY, RRule.MINUTELY, RRule.HOURLY].includes(options.freq),
+    byMinuteLimit: !allDay && options.freq !== undefined && [RRule.SECONDLY, RRule.MINUTELY].includes(options.freq),
+    bySecondLimit: !allDay && options.freq !== undefined && [RRule.SECONDLY].includes(options.freq),
     byMonthExpand: options.freq == RRule.YEARLY,
     byWeekNoExpand: options.freq == RRule.YEARLY,
     byYearDayExpand: options.freq == RRule.YEARLY,
-    byMonthDayExpand: [RRule.MONTHLY, RRule.YEARLY].includes(options.freq),
+    byMonthDayExpand: options.freq !== undefined && [RRule.MONTHLY, RRule.YEARLY].includes(options.freq),
     byDayExpand: options.freq == RRule.WEEKLY || (options.freq == RRule.MONTHLY && !byValsEnabled.byMonthDayExpand) || (options.freq == RRule.YEARLY && !byValsEnabled.byYearDayExpand && !byValsEnabled.byMonthDayExpand),
-    byHourExpand: !allDay && [RRule.DAILY, RRule.WEEKLY, RRule.MONTHLY, RRule.YEARLY].includes(options.freq),
-    byMinuteExpand: !allDay && [RRule.HOURLY, RRule.DAILY, RRule.WEEKLY, RRule.MONTHLY, RRule.YEARLY].includes(options.freq),
+    byHourExpand: !allDay && options.freq !== undefined && [RRule.DAILY, RRule.WEEKLY, RRule.MONTHLY, RRule.YEARLY].includes(options.freq),
+    byMinuteExpand: !allDay && options.freq !== undefined && [RRule.HOURLY, RRule.DAILY, RRule.WEEKLY, RRule.MONTHLY, RRule.YEARLY].includes(options.freq),
     bySecondExpand: !allDay && options.freq != RRule.SECONDLY,
     byDayNumeric: options.freq == RRule.MONTHLY || (options.freq == RRule.YEARLY && !byValsEnabled.byWeekNoExpand)
   })
@@ -417,7 +417,7 @@
     [RecurrencePreset.MonthlyDay]: "Monthly on this day",
     [RecurrencePreset.MonthlyDayReverse]: "Monthly on this day reverse",
     [RecurrencePreset.YearlyDate]: "Yearly",
-    [RecurrencePreset.YearlyMonthDay]: "Yearl month day",
+    [RecurrencePreset.YearlyMonthDay]: "Yearly month day",
     [RecurrencePreset.YearlyMonthDayReverse]: "Yearly month day reverse",
   }
   let applicableRecurrencePresets: Record<Frequency, RecurrencePreset[]> = {
@@ -437,19 +437,21 @@
     return Math.ceil((lastDayOfMonth.getDate() - dtstart.getDate() + 1) / 7);
   })
   let recurrencePresets: Record<RecurrencePreset, Partial<Options>> = $derived({
-    [RecurrencePreset.Daily]: { freq: RRule.DAILY },
-    [RecurrencePreset.DailyWeekdays]: { freq: RRule.DAILY, byweekday: [ RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR ] },
-    [RecurrencePreset.Weekly]: { freq: RRule.WEEKLY },
-    [RecurrencePreset.MonthlyDate]: { freq: RRule.MONTHLY, bymonthday: dtstart.getDate() },
-    [RecurrencePreset.MonthlyDay]: { freq: RRule.MONTHLY, byweekday: weekdays[dtstart.getDay()].nth(nthMonthDay) },
-    [RecurrencePreset.MonthlyDayReverse]: { freq: RRule.MONTHLY, byweekday: weekdays[dtstart.getDay()].nth(-nthReverseMonthDay) },
-    [RecurrencePreset.YearlyDate]: { freq: RRule.YEARLY, bymonth: dtstart.getMonth(), bymonthday: dtstart.getDate() },
-    [RecurrencePreset.YearlyMonthDay]: { freq: RRule.YEARLY, bymonth: dtstart.getMonth(), byweekday: weekdays[dtstart.getDay()].nth(nthMonthDay) },
-    [RecurrencePreset.YearlyMonthDayReverse]: { freq: RRule.YEARLY, bymonth: dtstart.getMonth(), byweekday: weekdays[dtstart.getDay()].nth(-nthReverseMonthDay) },
+    [RecurrencePreset.Daily]: { dtstart: dtstart, freq: RRule.DAILY },
+    [RecurrencePreset.DailyWeekdays]: { dtstart: dtstart, freq: RRule.DAILY, byweekday: [ RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR ] },
+    [RecurrencePreset.Weekly]: { dtstart: dtstart, freq: RRule.WEEKLY },
+    [RecurrencePreset.MonthlyDate]: { dtstart: dtstart, freq: RRule.MONTHLY, bymonthday: dtstart.getDate() },
+    [RecurrencePreset.MonthlyDay]: { dtstart: dtstart, freq: RRule.MONTHLY, byweekday: weekdays[dtstart.getDay()].nth(nthMonthDay) },
+    [RecurrencePreset.MonthlyDayReverse]: { dtstart: dtstart, freq: RRule.MONTHLY, byweekday: weekdays[dtstart.getDay()].nth(-nthReverseMonthDay) },
+    [RecurrencePreset.YearlyDate]: { dtstart: dtstart, freq: RRule.YEARLY, bymonth: dtstart.getMonth() + 1, bymonthday: dtstart.getDate() },
+    [RecurrencePreset.YearlyMonthDay]: { dtstart: dtstart, freq: RRule.YEARLY, bymonth: dtstart.getMonth() + 1, byweekday: weekdays[dtstart.getDay()].nth(nthMonthDay) },
+    [RecurrencePreset.YearlyMonthDayReverse]: { dtstart: dtstart, freq: RRule.YEARLY, bymonth: dtstart.getMonth() + 1, byweekday: weekdays[dtstart.getDay()].nth(-nthReverseMonthDay) },
   });
   let chosenRecurrencePreset: RecurrencePreset | null = $state(null);
 
-  function applyPreset(chosen: RecurrencePreset) {
+  function applyPreset(chosen: RecurrencePreset | null) {
+    if (chosen == null) return;
+
     options.bymonth = null;
     options.byweekno = null;
     options.byyearday = null;
@@ -468,20 +470,24 @@
     }
   }
 
+  const presetRelevantOptions = [
+    "freq", "bysetpos", "bymonth", "bymonthday", "bynmonthday", "byyearday", "byweekno", "byweekday", "bynweekday", "byhour", "byminute", "bysecond", "byeaster"
+  ]
+
   // Map recurrence to preset
-  // TODO
-  //$effect(() => {
-  //  console.log(options);
-  //  console.log(recurrencePresets[RecurrencePreset.YearlyDate]);
-  //  chosenRecurrencePreset =(
-  //      Object
-  //        .values(recurrencePresets)
-  //        .filter(x => Object.entries(x).every(kv => {
-  //          //@ts-ignore
-  //          return options[kv[0]] === kv[1]
-  //        })) as [RecurrencePreset | null, Partial<Options>][]
-  //    ).concat([[null, {}]])[0][0];
-  //});
+  $effect(() => {
+    const normalizedCurrent = new RRule(options);
+
+    const matches = Object
+      .entries(recurrencePresets)
+      .filter(preset => {
+        const normalizedPreset = new RRule(preset[1]);
+        //@ts-ignore
+        return presetRelevantOptions.every(optionKey => JSON.stringify(normalizedCurrent.options[optionKey]) === JSON.stringify(normalizedPreset.options[optionKey]));
+      });
+
+    chosenRecurrencePreset = (matches.length == 0 ? null : matches[0][0]) as (RecurrencePreset | null);
+  });
 </script>
 
 <!-- FREQ -->
@@ -508,15 +514,20 @@
 -->
 
 {#if simple}
-  {@const presets = applicableRecurrencePresets[options.freq]}
+  {@const presets = options.freq === undefined ? [] : applicableRecurrencePresets[options.freq]}
+  {@const mappedPresets = presets.map(x => ({
+    name: recurrencePresetNames[x],
+    value: x,
+  }))}
+  {@const mappedPresetsAndCustom = (mappedPresets as Option<RecurrencePreset | null>[]).concat(chosenRecurrencePreset !== null ? [] : [{
+    name: "Custom",
+    value: chosenRecurrencePreset,
+  }])}
   {#if presets.length > 1}
     <RadioInput
       bind:value={chosenRecurrencePreset}
       name="test"
-      options={presets.map(x => ({
-        name: recurrencePresetNames[x],
-        value: x,
-      }))}
+      options={mappedPresetsAndCustom}
       onClick={applyPreset}
     />
   {/if}
@@ -534,7 +545,7 @@
         name="recurrence_bymonth_limit"
         placeholder="Months"
         options={ [...Array(12).keys()].map(x => ({ value: x+1, name: getMonthName(x, true) })) }
-        onClick={() => { byVals.byMonthLimit = byVals.byMonthLimit; }}
+        onClick={() => { byVals.byMonthLimit = $state.snapshot(byVals.byMonthLimit); }}
       />
     {/if}
   {/if}
@@ -550,7 +561,7 @@
         name="recurrence_bymonth_expand"
         placeholder="Months"
         options={ [...Array(12).keys()].map(x => ({ value: x+1, name: getMonthName(x, true) })) }
-        onClick={() => { byVals.byMonthExpand = byVals.byMonthExpand; }}
+        onClick={() => { byVals.byMonthExpand = $state.snapshot(byVals.byMonthExpand); }}
       />
     {/if}
   {/if}
@@ -571,7 +582,7 @@
           [...Array(53).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(53).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
         }
-        click={() => { byVals.byWeekNoExpand = byVals.byWeekNoExpand; }}
+        click={() => { byVals.byWeekNoExpand = $state.snapshot(byVals.byWeekNoExpand); }}
       />
     {/if}
   {/if}
@@ -592,7 +603,7 @@
           [...Array(366).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(366).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
         }
-        click={() => { byVals.byYearDayLimit = byVals.byYearDayLimit; }}
+        click={() => { byVals.byYearDayLimit = $state.snapshot(byVals.byYearDayLimit); }}
       />
     {/if}
   {/if}
@@ -611,7 +622,7 @@
           [...Array(366).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(366).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
         }
-        click={() => { byVals.byYearDayExpand = byVals.byYearDayExpand; }}
+        click={() => { byVals.byYearDayExpand = $state.snapshot(byVals.byYearDayExpand); }}
       />
     {/if}
   {/if}
@@ -632,7 +643,7 @@
           [...Array(31).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(31).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
         }
-        click={() => { byVals.byMonthDayLimit = byVals.byMonthDayLimit; }}
+        click={() => { byVals.byMonthDayLimit = $state.snapshot(byVals.byMonthDayLimit); }}
       />
     {/if}
   {/if}
@@ -651,7 +662,7 @@
           [...Array(31).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(31).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
         }
-        click={() => { byVals.byMonthDayExpand = byVals.byMonthDayExpand; }}
+        click={() => { byVals.byMonthDayExpand = $state.snapshot(byVals.byMonthDayExpand); }}
       />
     {/if}
   {/if}
@@ -682,7 +693,7 @@
               )
               .map(x => ({ value: x.value.toString(), name: x.name }))
           }
-          click={() => { byVals.byDayLimit = byVals.byDayLimit; }}
+          click={() => { byVals.byDayLimit = $state.snapshot(byVals.byDayLimit); }}
         />
       {:else}
         <SelectButtonsMulti
@@ -695,7 +706,7 @@
               .sort((a, b) =>  a.index-b.index)
               .map(x => ({ value: x.value.toString(), name: x.name }))
           }
-          onClick={() => { byVals.byDayLimit = byVals.byDayLimit; }}
+          onClick={() => { byVals.byDayLimit = $state.snapshot(byVals.byDayLimit); }}
         />
       {/if}
     {/if}
@@ -725,7 +736,7 @@
               )
               .map(x => ({ value: x.value.toString(), name: x.name }))
           }
-          click={() => { byVals.byDayExpand = byVals.byDayExpand; }}
+          click={() => { byVals.byDayExpand = $state.snapshot(byVals.byDayExpand); }}
         />
       {:else}
         <SelectButtonsMulti
@@ -738,7 +749,7 @@
               .sort((a, b) =>  a.index-b.index)
               .map(x => ({ value: x.value.toString(), name: x.name }))
           }
-          onClick={() => { byVals.byDayExpand = byVals.byDayExpand; }}
+          onClick={() => { byVals.byDayExpand = $state.snapshot(byVals.byDayExpand); }}
         />
       {/if}
     {/if}
@@ -760,7 +771,7 @@
           options={
             [...Array(24).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
-          click={() => { byVals.byHourLimit = byVals.byHourLimit; }}
+          click={() => { byVals.byHourLimit = $state.snapshot(byVals.byHourLimit); }}
         />
       {/if}
     {/if}
@@ -778,7 +789,7 @@
           options={
             [...Array(24).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
-          click={() => { byVals.byHourExpand = byVals.byHourExpand; }}
+          click={() => { byVals.byHourExpand = $state.snapshot(byVals.byHourExpand); }}
         />
       {/if}
     {/if}
@@ -798,7 +809,7 @@
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
-          click={() => { byVals.byMinuteLimit = byVals.byMinuteLimit; }}
+          click={() => { byVals.byMinuteLimit = $state.snapshot(byVals.byMinuteLimit); }}
         />
       {/if}
     {/if}
@@ -816,7 +827,7 @@
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
-          click={() => { byVals.byMinuteExpand = byVals.byMinuteExpand; }}
+          click={() => { byVals.byMinuteExpand = $state.snapshot(byVals.byMinuteExpand); }}
         />
       {/if}
     {/if}
@@ -836,7 +847,7 @@
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
-          click={() => { byVals.bySecondLimit = byVals.bySecondLimit; }}
+          click={() => { byVals.bySecondLimit = $state.snapshot(byVals.bySecondLimit); }}
         />
       {/if}
     {/if}
@@ -854,7 +865,7 @@
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
-          click={() => { byVals.bySecondExpand = byVals.bySecondExpand; }}      
+          click={() => { byVals.bySecondExpand = $state.snapshot(byVals.bySecondExpand); }}      
         />
       {/if}
     {/if}
@@ -877,17 +888,17 @@
   />
 {/if}
 
-{(new RRule(options)).toText()}
-
 {#if !simple}
   <TextInput
     placeholder="RRULE"
     name="recurrence_rrule"
-    value={RRule.optionsToString(options).split("RRULE:")[1]}
+    value={options ? RRule.optionsToString(options).split("RRULE:")[1] : ""}
     onChange={(x) => {
       const parts = x.split("RRULE:");
       const ruleStr = parts[parts.length - 1];
-      options = RRule.fromString(ruleStr).options;
+      const newOptions = RRule.fromString(ruleStr).origOptions;
+      //@ts-ignore
+      options = newOptions;
     }}
   />
 {/if}

@@ -6,7 +6,7 @@
   import SelectInput from "../forms/SelectInput.svelte";
   import TextInput from "../forms/TextInput.svelte";
 
-  import { EmptyEvent, NoChangesEvent } from "$lib/client/placeholders";
+  import { EmptyEvent, NoChangesEvent, NoOp } from "$lib/client/placeholders";
   import { deepCopy, deepEquality } from "$lib/common/misc";
   import { getRepository } from "$lib/client/data/repository.svelte";
   import { isSameDay } from "$lib/common/date";
@@ -19,7 +19,7 @@
   import EventCopyModal from "./EventCopyModal.svelte";
   import IconButton from "../interactive/IconButton.svelte";
   import { Copy } from "lucide-svelte";
-  import { RRule, type Options } from "rrule";
+  import { Frequency, RRule, type Options } from "rrule";
   import { parseTimestampList, serializeTimestampList } from "../../lib/common/ical";
   import { SvelteSet } from "svelte/reactivity";
   import AffectedRecurrencesModal from "./AffectedRecurrencesModal.svelte";
@@ -43,17 +43,21 @@
 
   let showModalInternal: (initial?: EventModel, edit?: boolean, anchor?: HTMLElement) => Promise<EventModel> = $state(Promise.reject);
   let showCopyModal: (event: EventModel) => Promise<EventModel> = $state(Promise.reject);
-  let showRecurrenceRuleModal: (initial: Options) => Promise<Options> = $state(Promise.reject);
+  let showRecurrenceRuleModal: (initial: Partial<Options>) => Promise<Partial<Options>> = $state(Promise.reject);
   let selectAffectedRecurrences: (edit: boolean) => Promise<"this" | "thisandfuture" | "all"> = $state(Promise.reject);
   let editMode: boolean = $state(false);
 
   let event: EventModel = $state(EmptyEvent);
   let originalEvent: EventModel = $state(EmptyEvent);
+
   let eventRepeats = $state(false);
   let eventRecurrenceRrule = $state(new RRule());
-  let eventRecurrenceRruleOptions = $state<Options>(untrack(() => $state.snapshot(eventRecurrenceRrule).options));
+  let eventRecurrenceRruleOptions = $state<Partial<Options>>({});
   let eventRecurrenceRdate = $state(new SvelteSet<Date>());
   let eventRecurrenceExdate = $state(new SvelteSet<Date>());
+  $effect(() => {
+    eventRecurrenceRruleOptions.dtstart = event.date.start;
+  });
 
   let eventSourceType = $derived.by(() => {
     const calendar = repository.calendars.find(x => x.id === event.calendar);
@@ -66,9 +70,6 @@
   });
 
   showModal = async (initial?: EventModel, date?: Date, anchor?: HTMLElement): Promise<EventModel> => {
-    eventRecurrenceRrule = new RRule({ dtstart: date });
-    eventRecurrenceRruleOptions = eventRecurrenceRrule.options;
-
     if (!initial) {
       const start = new Date(date || new Date());
       start.setHours(12, 0, 0, 0);
@@ -95,6 +96,9 @@
 
       eventRepeats = false;
       //eventRecurrenceObject = null;
+
+      eventRecurrenceRrule = new RRule({ dtstart: start, freq: Frequency.YEARLY });
+      eventRecurrenceRruleOptions = eventRecurrenceRrule.origOptions;
     } else {
       event = {
         id: initial.id,
@@ -122,7 +126,9 @@
       if (event.date.recurrence) {
         if (event.date.recurrence.RRULE) {
           eventRecurrenceRrule = RRule.fromString(event.date.recurrence.RRULE);
-          eventRecurrenceRruleOptions = eventRecurrenceRrule.options;
+          eventRecurrenceRrule.origOptions.dtstart = event.date.start;
+          eventRecurrenceRrule = new RRule(eventRecurrenceRrule.origOptions);
+          eventRecurrenceRruleOptions = eventRecurrenceRrule.origOptions;
         }
 
         if (event.date.recurrence.RDATE)
@@ -280,7 +286,7 @@
           simple={true}
         />
         <Horizontal position="right">
-          <Link onClick={async () => await showRecurrenceRuleModal(eventRecurrenceRruleOptions)}>Advanced recurrence editing</Link>
+          <Link onClick={async () => await showRecurrenceRuleModal(eventRecurrenceRruleOptions).then(x => eventRecurrenceRruleOptions = x).catch(NoOp)}>Advanced recurrence editing</Link>
         </Horizontal>
         <RecurrenceRuleModal
           dtstart={event.date.start}

@@ -8,7 +8,7 @@
   import { date, time } from "@sveltia/i18n";
 
   interface Props {
-    value: Date | null;
+    value: Date | null | undefined;
     allDay?: boolean;
     placeholder: string;
     name: string;

@@ -6,11 +6,11 @@
   import RecurrenceInput from "../forms/RecurrenceInput.svelte";
 
   interface Props {
-    showModal: (initial: Options) => Promise<Options>;
+    showModal: (initial: Partial<Options>) => Promise<Partial<Options>>;
     dtstart: Date;
     allDay: boolean; }
 
-  let success: (result: Options) => void = $state(NoOp);
+  let success: (result: Partial<Options>) => void = $state(NoOp);
   let failure: (reason?: string | Error) => void = $state(NoOp);
 
   let {
@@ -19,8 +19,8 @@
     allDay
   }: Props = $props();
 
-  let showModalInternal: () => Promise<Options> = $state(Promise.reject);
-  let options = $state<Options>((new RRule()).options)
+  let showModalInternal: () => Promise<Partial<Options>> = $state(Promise.reject);
+  let options = $state<Partial<Options>>((new RRule()).origOptions)
 
   showModal = async (initial) => {
     options = initial;
@@ -31,7 +31,7 @@
 <Modal title={"Recurrence editing"} bind:showModal={showModalInternal} bind:success bind:failure>
   <RecurrenceInput
     dtstart={dtstart} 
-    options={options}
+    bind:options={options}
     allDay={allDay}
     editable={true}
   />
