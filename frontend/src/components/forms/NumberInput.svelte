@@ -1,11 +1,10 @@
 <script lang="ts">
   import { NoOp } from "$lib/client/placeholders";
   import { alwaysValid } from "$lib/client/validation";
-  import { number } from "@sveltia/i18n";
   import TextInput from "./TextInput.svelte";
 
   interface Props {
-    value?: number | undefined;
+    value?: number | null | undefined;
     placeholder: string;
     name: string;
     editable?: boolean;

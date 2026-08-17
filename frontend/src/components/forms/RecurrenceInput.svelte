@@ -902,6 +902,13 @@
     name="recurrence_until" 
     allDay={allDay}
   />
+{:else if endType == "count"}
+  <NumberInput
+    placeholder="Count"
+    name="recurrence_count"
+    min={1}
+    bind:value={options.count}
+  />
 {/if}
 
 {#if !simple}
