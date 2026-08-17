@@ -134,11 +134,13 @@ recurrence:
         * {{Every {$interval} months on the {$nthrev} {$weekday}}}
     yearlydate: |
       .input {$interval :integer}
-      .input {$date :date fields=|month-day| length=long}
+      .input {$date :integer}
+      .input {$day :ordinal}
+      .local $month = {$date :month month=long}
       .match $interval
-        1 {{Every year on the {$date}}}
-        2 {{Every other year on the {$date}}}
-        * {{Every {$interval} years on the {$date}}}
+        1 {{Every year on the {$day} of {$month}}}
+        2 {{Every other year on the {$day} of {$month}}}
+        * {{Every {$nth} years on the {$day} of {$month}}}
     yearlymonthday: |
       .input {$interval :integer}
       .input {$date :integer}
