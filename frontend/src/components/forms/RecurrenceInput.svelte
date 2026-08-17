@@ -410,17 +410,25 @@
     YearlyMonthDay,
     YearlyMonthDayReverse,
   }
-  let recurrencePresetNames: Record<RecurrencePreset, string> = {
-    [RecurrencePreset.Daily]: "Daily",
-    [RecurrencePreset.DailyWeekdays]: "Daily on weekdays",
-    [RecurrencePreset.Weekly]: "Weekly",
-    [RecurrencePreset.MonthlyDate]: "Monthly",
-    [RecurrencePreset.MonthlyDay]: "Monthly on this day",
-    [RecurrencePreset.MonthlyDayReverse]: "Monthly on this day reverse",
-    [RecurrencePreset.YearlyDate]: "Yearly",
-    [RecurrencePreset.YearlyMonthDay]: "Yearly month day",
-    [RecurrencePreset.YearlyMonthDayReverse]: "Yearly month day reverse",
-  }
+  let nthMonthDay = $derived(Math.ceil(dtstart.getDate() / 7))
+  let nthReverseMonthDay = $derived.by(() => {
+    const lastDayOfMonth = new Date(dtstart);
+    lastDayOfMonth.setMonth(lastDayOfMonth.getMonth() + 1);
+    lastDayOfMonth.setDate(0);
+    return Math.max(Math.ceil((lastDayOfMonth.getDate() - dtstart.getDate() + 1) / 7), 1);
+  })
+  let recurrencePresetNameParameters = $derived({ values: { interval: options.interval || 1, date: dtstart, day: dtstart.getDate(), nth: nthMonthDay, nthrev: nthReverseMonthDay } });
+  let recurrencePresetNames: Record<RecurrencePreset, string> = $derived({
+    [RecurrencePreset.Daily]: t("recurrence.presets.daily", recurrencePresetNameParameters),
+    [RecurrencePreset.DailyWeekdays]: t("recurrence.presets.dailyweekdays", recurrencePresetNameParameters),
+    [RecurrencePreset.Weekly]: t("recurrence.presets.weekly", recurrencePresetNameParameters),
+    [RecurrencePreset.MonthlyDate]: t("recurrence.presets.monthlydate", recurrencePresetNameParameters),
+    [RecurrencePreset.MonthlyDay]: t("recurrence.presets.monthlyday", recurrencePresetNameParameters),
+    [RecurrencePreset.MonthlyDayReverse]: t("recurrence.presets.monthlydayreverse", recurrencePresetNameParameters),
+    [RecurrencePreset.YearlyDate]: t("recurrence.presets.yearlydate", recurrencePresetNameParameters),
+    [RecurrencePreset.YearlyMonthDay]: t("recurrence.presets.yearlymonthday", recurrencePresetNameParameters),
+    [RecurrencePreset.YearlyMonthDayReverse]: t("recurrence.presets.yearlymonthdayreverse", recurrencePresetNameParameters),
+  })
   let applicableRecurrencePresets: Record<Frequency, RecurrencePreset[]> = {
     [RRule.SECONDLY]: [],
     [RRule.MINUTELY]: [],
@@ -430,13 +438,6 @@
     [RRule.MONTHLY]: [ RecurrencePreset.MonthlyDate, RecurrencePreset.MonthlyDay, RecurrencePreset.MonthlyDayReverse ],
     [RRule.YEARLY]: [ RecurrencePreset.YearlyDate, RecurrencePreset.YearlyMonthDay, RecurrencePreset.YearlyMonthDayReverse ],
   }
-  let nthMonthDay = $derived(Math.ceil(dtstart.getDate() / 7))
-  let nthReverseMonthDay = $derived.by(() => {
-    const lastDayOfMonth = new Date(dtstart);
-    lastDayOfMonth.setMonth(lastDayOfMonth.getMonth() + 1);
-    lastDayOfMonth.setDate(0);
-    return Math.ceil((lastDayOfMonth.getDate() - dtstart.getDate() + 1) / 7);
-  })
   let recurrencePresets: Record<RecurrencePreset, Partial<Options>> = $derived({
     [RecurrencePreset.Daily]: { dtstart: dtstart, freq: RRule.DAILY },
     [RecurrencePreset.DailyWeekdays]: { dtstart: dtstart, freq: RRule.DAILY, byweekday: [ RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR ] },
@@ -500,21 +501,21 @@
 </script>
 
 <!-- FREQ -->
-<SelectInput bind:value={options.freq} name="recurrence_freq" placeholder="Frequency" showLabel={true} options={
+<SelectInput bind:value={options.freq} name="recurrence_freq" placeholder={t("recurrence.props.freq.name")} showLabel={true} options={
   (simple || allDay ? [] : [
-    { value: RRule.SECONDLY, name: "Secondly" },
-    { value: RRule.MINUTELY, name: "Minutely" },
-    { value: RRule.HOURLY, name: "Hourly" },
+    { value: RRule.SECONDLY, name: t("recurrence.props.freq.vals.secondly") },
+    { value: RRule.MINUTELY, name: t("recurrence.props.freq.vals.minutely") },
+    { value: RRule.HOURLY, name: t("recurrence.props.freq.vals.hourly") },
   ]).concat([
-    { value: RRule.DAILY, name: "Daily" },
-    { value: RRule.WEEKLY, name: "Weekly" },
-    { value: RRule.MONTHLY, name: "Monthly" },
-    { value: RRule.YEARLY, name: "Yearly" },
+    { value: RRule.DAILY, name: t("recurrence.props.freq.vals.daily") },
+    { value: RRule.WEEKLY, name: t("recurrence.props.freq.vals.weekly") },
+    { value: RRule.MONTHLY, name: t("recurrence.props.freq.vals.monthly") },
+    { value: RRule.YEARLY, name: t("recurrence.props.freq.vals.yearly") },
   ]
 )} editable={editable} />
 
 <NumberInput
-  placeholder="Interval"
+  placeholder={t("recurrence.props.interval.name")}
   name="recurrence_interval"
   min={1}
   bind:value={options.interval}
@@ -539,10 +540,10 @@
     name: "Custom",
     value: chosenRecurrencePreset,
   }])}
-  {#if presets.length > 1}
+  {#if mappedPresetsAndCustom.length > 1}
     <RadioInput
       bind:value={chosenRecurrencePreset}
-      name="test"
+      name="recurrence_preset"
       options={mappedPresetsAndCustom}
       onClick={applyPreset}
     />
@@ -553,13 +554,13 @@
     <ToggleInput
       bind:value={byValsEnabled.byMonthLimit}
       name="recurrence_bymonth_limit_enable" 
-      description="Only during specific months"
+      description={t("recurrence.props.by.month.limit.enable")}
     />
     {#if byValsEnabled.byMonthLimit}
       <SelectButtonsMulti
         bind:values={byVals.byMonthLimit}
         name="recurrence_bymonth_limit"
-        placeholder="Months"
+        placeholder={t("recurrence.props.by.month.limit.name")}
         options={ [...Array(12).keys()].map(x => ({ value: x+1, name: getMonthName(x, true) })) }
         onClick={() => { byVals.byMonthLimit = $state.snapshot(byVals.byMonthLimit); }}
       />
@@ -569,13 +570,13 @@
     <ToggleInput
       bind:value={byValsEnabled.byMonthExpand}
       name="recurrence_bymonth_expand_enable" 
-      description="Specify month(s) of the year"
+      description={t("recurrence.props.by.month.expand.enable")}
     />
     {#if byValsEnabled.byMonthExpand}
       <SelectButtonsMulti
         bind:values={byVals.byMonthExpand}
         name="recurrence_bymonth_expand"
-        placeholder="Months"
+        placeholder={t("recurrence.props.by.month.expand.name")}
         options={ [...Array(12).keys()].map(x => ({ value: x+1, name: getMonthName(x, true) })) }
         onClick={() => { byVals.byMonthExpand = $state.snapshot(byVals.byMonthExpand); }}
       />
@@ -587,13 +588,13 @@
     <ToggleInput
       bind:value={byValsEnabled.byWeekNoExpand}
       name="recurrence_byweekno_expand_enable" 
-      description="Specify week(s) of the year"
+      description={t("recurrence.props.by.weekno.expand.enable")}
     />
     {#if byValsEnabled.byWeekNoExpand}
       <SelectInputMulti
         bind:values={byVals.byWeekNoExpand}
         name="recurrence_byweekno_expand"
-        placeholder="Week numbers"
+        placeholder={t("recurrence.props.by.weekno.expand.name")}
         options={
           [...Array(53).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(53).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
@@ -608,13 +609,13 @@
     <ToggleInput
       bind:value={byValsEnabled.byYearDayLimit}
       name="recurrence_byyearday_limit_enable" 
-      description="Only on specific days of the year"
+      description={t("recurrence.props.by.yearday.limit.enable")}
     />
     {#if byValsEnabled.byYearDayLimit}
       <SelectInputMulti
         bind:values={byVals.byMonthDayLimit}
         name="recurrence_byyearday_limit"
-        placeholder="Days of the year"
+        placeholder={t("recurrence.props.by.year.limit.name")}
         options={
           [...Array(366).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(366).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
@@ -627,13 +628,13 @@
     <ToggleInput
       bind:value={byValsEnabled.byYearDayExpand}
       name="recurrence_byyearday_limit_enable" 
-      description="Specify day(s) of the year"
+      description={t("recurrence.props.by.yearday.expand.enable")}
     />
     {#if byValsEnabled.byYearDayExpand}
       <SelectInputMulti
         bind:values={byVals.byMonthDayExpand}
         name="recurrence_byyearday_expand"
-        placeholder="Days of the year"
+        placeholder={t("recurrence.props.by.yearday.expand.name")}
         options={
           [...Array(366).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(366).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
@@ -647,14 +648,14 @@
   {#if byValsSemantics.byMonthDayLimit }
     <ToggleInput
       bind:value={byValsEnabled.byMonthDayLimit}
-      name="recurrence_bymonth_limit_enable" 
-      description="Only on specific days of the month"
+      name="recurrence_bymonthday_limit_enable" 
+      description={t("recurrence.props.by.monthday.limit.enable")}
     />
     {#if byValsEnabled.byMonthDayLimit}
       <SelectInputMulti
         bind:values={byVals.byMonthDayLimit}
         name="recurrence_bymonthday_limit"
-        placeholder="Days of the month"
+        placeholder={t("recurrence.props.by.monthday.limit.name")}
         options={
           [...Array(31).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(31).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
@@ -666,14 +667,14 @@
   {#if byValsSemantics.byMonthDayExpand }
     <ToggleInput
       bind:value={byValsEnabled.byMonthDayExpand}
-      name="recurrence_bymonth_expand_enable" 
-      description="Specify day(s) of the month"
+      name="recurrence_bymonthday_expand_enable" 
+      description={t("recurrence.props.by.monthday.expand.enable")}
     />
     {#if byValsEnabled.byMonthDayExpand}
       <SelectInputMulti
         bind:values={byVals.byMonthDayExpand}
         name="recurrence_bymonthday_expand"
-        placeholder="Days of the month"
+        placeholder={t("recurrence.props.by.monthday.expand.name")}
         options={
           [...Array(31).keys()].map(x => ({ value: x+1, name: t("numbers.ordinal.normal", { values: { num: x + 1 } }) })).concat(
           [...Array(31).keys()].map(x => ({ value: -(x+1), name: t("numbers.ordinal.reverse", { values: { num: x + 1 } }) })))
@@ -688,14 +689,14 @@
     <ToggleInput
       bind:value={byValsEnabled.byDayLimit}
       name="recurrence_byday_limit_enable" 
-      description="Only on specific weekdays"
+      description={t(`recurrence.props.by.day.${byValsSemantics.byDayNumeric ? "numeric" : "dayname"}.limit.enable`)}
     />
     {#if byValsEnabled.byDayLimit}
       {#if byValsSemantics.byDayNumeric}
         <SelectInputMulti
           bind:values={byVals.byDayLimit}
           name="recurrence_byday_limit"
-          placeholder="Weekdays"
+          placeholder={t("recurrence.props.by.day.numeric.limit.name")}
           options={
             [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA]
               .map((x, i) => ({ value: x, name: getDayName(i, false), index: (i + 7 - settings.userSettings[UserSettingKeys.FirstDayOfWeek]) % 7 }))
@@ -715,7 +716,7 @@
         <SelectButtonsMulti
           bind:values={byVals.byDayLimit}
           name="recurrence_byday_limit"
-          placeholder="Weekdays"
+          placeholder={t("recurrence.props.by.day.dayname.limit.name")}
           options={
             [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA]
               .map((x, i) => ({ value: x, name: getDayName(i, true), index: (i + 7 - settings.userSettings[UserSettingKeys.FirstDayOfWeek]) % 7 }))
@@ -731,14 +732,14 @@
     <ToggleInput
       bind:value={byValsEnabled.byDayExpand}
       name="recurrence_byday_expand_enable" 
-      description={byValsSemantics.byDayNumeric ? "Specify weekday(s)" : "Specify day(s) of the week"}
+      description={t(`recurrence.props.by.day.${byValsSemantics.byDayNumeric ? "numeric" : "dayname"}.expand.enable`)}
     />
     {#if byValsEnabled.byDayExpand}
       {#if byValsSemantics.byDayNumeric}
         <SelectInputMulti
           bind:values={byVals.byDayExpand}
           name="recurrence_byday_expand"
-          placeholder="Weekdays"
+          placeholder={t("recurrence.props.by.day.numeric.expand.name")}
           options={
             [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA]
               .map((x, i) => ({ value: x, name: getDayName(i, false), index: (i + 7 - settings.userSettings[UserSettingKeys.FirstDayOfWeek]) % 7 }))
@@ -758,7 +759,7 @@
         <SelectButtonsMulti
           bind:values={byVals.byDayExpand}
           name="recurrence_byday_expand"
-          placeholder="Weekdays"
+          placeholder={t("recurrence.props.by.day.dayname.expand.name")}
           options={
             [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA]
               .map((x, i) => ({ value: x, name: getDayName(i, true), index: (i + 7 - settings.userSettings[UserSettingKeys.FirstDayOfWeek]) % 7 }))
@@ -777,13 +778,13 @@
       <ToggleInput
         bind:value={byValsEnabled.byHourLimit}
         name="recurrence_byhour_limit_enable" 
-        description="Only on specific hours of the day"
+        description={t("recurrence.props.by.hour.limit.enable")}
       />
       {#if byValsEnabled.byHourLimit}
         <SelectInputMulti
           bind:values={byVals.byHourLimit}
           name="recurrence_byhour_limit"
-          placeholder="Hours of the day"
+          placeholder={t("recurrence.props.by.hour.limit.name")}
           options={
             [...Array(24).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
@@ -795,13 +796,13 @@
       <ToggleInput
         bind:value={byValsEnabled.byHourExpand}
         name="recurrence_byhour_expand_enable" 
-        description="Specify hour(s) of the day"
+        description={t("recurrence.props.by.hour.expand.enable")}
       />
       {#if byValsEnabled.byHourExpand}
         <SelectInputMulti
           bind:values={byVals.byHourExpand}
           name="recurrence_byhour_expand"
-          placeholder="Hours of the day"
+          placeholder={t("recurrence.props.by.hour.expand.name")}
           options={
             [...Array(24).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
@@ -815,13 +816,13 @@
       <ToggleInput
         bind:value={byValsEnabled.byMinuteLimit}
         name="recurrence_byminute_limit_enable" 
-        description="Only on specific minutes of the hour"
+        description={t("recurrence.props.by.minute.limit.enable")}
       />
       {#if byValsEnabled.byMinuteLimit}
         <SelectInputMulti
           bind:values={byVals.byMinuteLimit}
           name="recurrence_byminute_limit"
-          placeholder="Minutes of the hour"
+          placeholder={t("recurrence.props.by.minute.limit.name")}
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
@@ -833,13 +834,13 @@
       <ToggleInput
         bind:value={byValsEnabled.byMinuteExpand}
         name="recurrence_byminute_expand_enable" 
-        description="Specify minute(s) of the hour"
+        description={t("recurrence.props.by.minute.expand.enable")}
       />
       {#if byValsEnabled.byMinuteExpand}
         <SelectInputMulti
           bind:values={byVals.byMinuteExpand}
           name="recurrence_byminute_expand"
-          placeholder="Minutes of the hour"
+          placeholder={t("recurrence.props.by.minute.expand.name")}
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
@@ -853,13 +854,13 @@
       <ToggleInput
         bind:value={byValsEnabled.bySecondLimit}
         name="recurrence_bysecond_limit_enable" 
-        description="Only on specific seconds of the minute"
+        description={t("recurrence.props.by.second.limit.enable")}
       />
       {#if byValsEnabled.bySecondLimit}
         <SelectInputMulti
           bind:values={byVals.bySecondLimit}
           name="recurrence_bysecond_limit"
-          placeholder="Seconds of the minute"
+          placeholder={t("recurrence.props.by.second.limit.name")}
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
@@ -871,13 +872,13 @@
       <ToggleInput
         bind:value={byValsEnabled.bySecondExpand}
         name="recurrence_bysecond_expand_enable" 
-        description="Specify second(s) of the minute"
+        description={t("recurrence.props.by.second.expand.enable")}
       />
       {#if byValsEnabled.bySecondExpand}
         <SelectInputMulti
           bind:values={byVals.bySecondExpand}
           name="recurrence_bysecond_expand"
-          placeholder="Seconds of the minute"
+          placeholder={t("recurrence.props.by.second.expand.name")}
           options={
             [...Array(60).keys()].map(x => ({ value: x, name: t("numbers.ordinal.normal", { values: { num: x } }) }))
           }
@@ -888,23 +889,23 @@
   {/if}
 {/if}
 
-<SelectButtons bind:value={endType} name="recurrence_duration" placeholder="Duration" options={[
-  { value: "date", name: "Until specified date" },
-  { value: "count", name: "Repetion count" },
-  { value: "forever", name: "Repeat forever" },
+<SelectButtons bind:value={endType} name="recurrence_duration" placeholder={t("recurrence.props.duration.name")} options={[
+  { value: "date", name: t("recurrence.props.duration.vals.date.name") },
+  { value: "count", name: t("recurrence.props.duration.vals.count.name") },
+  { value: "forever", name: t("recurrence.props.duration.vals.forever") },
 ]} editable={editable} />
 
 {#if endType == "date"}
   <DateTimeInput
     bind:value={options.until}
     editable={editable}
-    placeholder="Until"
+    placeholder={t("recurrence.props.duration.vals.date.param")}
     name="recurrence_until" 
     allDay={allDay}
   />
 {:else if endType == "count"}
   <NumberInput
-    placeholder="Count"
+    placeholder={t("recurrence.props.duration.vals.count.param")}
     name="recurrence_count"
     min={1}
     bind:value={options.count}
@@ -913,7 +914,7 @@
 
 {#if !simple}
   <TextInput
-    placeholder="RRULE"
+    placeholder={t("recurrence.props.rrule")}
     name="recurrence_rrule"
     value={options ? RRule.optionsToString(options).split("RRULE:")[1] : ""}
     onChange={(x) => {

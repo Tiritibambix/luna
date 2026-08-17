@@ -30,6 +30,8 @@ button:
   cancel: "Cancel"
   reset: "Reset"
   details: "Details"
+  increment: "Increment"
+  decrement: "Decrement"
 
 credits:
   title: "Credits"
@@ -91,6 +93,166 @@ form:
 
 recurrence:
   repeats: "Repeats"
+  presets:
+    custom: "Custom"
+    daily: |
+      .input {$interval :integer}
+      .match $interval
+        1 {{Every day}}
+        2 {{Every other day}}
+        * {{Every {$interval} days}}
+    dailyweekdays: |
+      .input {$interval :integer}
+      .match $interval
+        1 {{Every weekday}}
+        2 {{Every other day on weekdays}}
+        * {{Every {$interval} days on weekdays}}
+    monthlydate: |
+      .input {$interval :integer}
+      .input {$day :ordinal}
+      .match $interval
+        1 {{Every month on the {$day}}}
+        2 {{Every other monh on the {$day}}}
+        * {{Every {$interval} months on the {$day}}}
+    monthlyday: |
+      .input {$interval :integer}
+      .input {$date :integer}
+      .input {$nth :ordinal}
+      .local $weekday = {$date :weekday weekday=long}
+      .match $interval
+        1 {{Every month on the {$nth} {$weekday}}}
+        2 {{Every other monh on the {$nth} {$weekday}}}
+        * {{Every {$interval} months on the {$nth} {$weekday}}}
+    monthlydayreverse: |
+      .input {$interval :integer}
+      .input {$date :integer}
+      .input {$nthrev :ordinal order=reverse}
+      .local $weekday = {$date :weekday weekday=long}
+      .match $interval
+        1 {{Every month on the {$nthrev} {$weekday}}}
+        2 {{Every other monh on the {$nthrev} {$weekday}}}
+        * {{Every {$interval} months on the {$nthrev} {$weekday}}}
+    yearlydate: |
+      .input {$interval :integer}
+      .input {$date :date fields=|month-day| length=long}
+      .match $interval
+        1 {{Every year on the {$date}}}
+        2 {{Every other year on the {$date}}}
+        * {{Every {$interval} years on the {$date}}}
+    yearlymonthday: |
+      .input {$interval :integer}
+      .input {$date :integer}
+      .input {$nth :ordinal}
+      .local $weekday = {$date :weekday weekday=long}
+      .local $month = {$date :month month=long}
+      .match $interval
+        1 {{Every year on the {$nth} {$weekday} of {$month}}}
+        2 {{Every other year on the {$nth} {$weekday} of {$month}}}
+        * {{Every {$interval} years on the {$nth} {$weekday} of {$month}}}
+    yearlymonthdayreverse: |
+      .input {$interval :integer}
+      .input {$date :integer}
+      .input {$nthrev :ordinal order=reverse}
+      .local $weekday = {$date :weekday weekday=long}
+      .local $month = {$date :month month=long}
+      .match $interval
+        1 {{Every year on the {$nthrev} {$weekday} of {$month}}}
+        2 {{Every other year on the {$nthrev} {$weekday} of {$month}}}
+        * {{Every {$interval} years on the {$nthre} {$weekday} of {$month}}}
+    weekly: |
+      .input {$interval :integer}
+      .match $interval
+        1 {{Every week}}
+        2 {{Every other week}}
+        * {{Every {$interval} weeks}}
+  props:
+    freq:
+      name: "Frequency"
+      vals:
+        secondly: "Secondly"
+        minutely: "Minutely"
+        hourly: "Hourly"
+        daily: "Daily"
+        weekly: "Weekly"
+        monthly: "Monthly"
+        yearly: "Yearly"
+    interval:
+      name: "Interval"
+    duration:
+      name: "Duration"
+      vals:
+        date:
+          name: "Until specified date"
+          param: "End of recurrence"
+        count:
+          name: "Repetition count"
+          param: "Amount of events"
+        forever: "Forever"
+    rrule: "RRULE"
+    rdate: "RDATE"
+    exdate: "EXDATE"
+    by:
+      month:
+        limit:
+          enable: "Only during specific months"
+          name: "Months"
+        expand:
+          enable: "Specify month(s) of the year"
+          name: "Months"
+      weekno:
+        expand:
+          enable: "Specify weeks(s) of the year"
+          name: "Week numbers"
+      yearday:
+        limit:
+          enable: "Only on specific days of the year"
+          name: "Days of the year"
+        expand:
+          enable: "Specify day(s) of the year"
+          name: "Days of the year"
+      monthday:
+        limit:
+          enable: "Only on specific days of the month"
+          name: "Days of the month"
+        expand:
+          enable: "Specify day(s) of the month"
+          name: "Days of the month"
+      day:
+        dayname:
+          limit:
+            enable: "Only on specific weekdays"
+            name: "Weekdays"
+          expand:
+            enable: "Specify day(s) of the week"
+            name: "Weekdays"
+        numeric:
+          limit:
+            enable: "Only on specific weekdays"
+            name: "Weekdays"
+          expand:
+            enable: "Specify weekday(s)"
+            name: "Weekdays"
+      hour:
+        limit:
+          enable: "Only during specific hours of the day"
+          name: "Hours of the day"
+        expand:
+          enable: "Specify hour(s) of the day"
+          name: "Hours of the day"
+      minute:
+        limit:
+          enable: "Only during specific minutes of the hour"
+          name: "Minutes of the hour"
+        expand:
+          enable: "Specify minute(s) of the hour"
+          name: "Minutes of the hour"
+      seconds:
+        limit:
+          enable: "Only during specific seconds of the minute"
+          name: "Seconds of the minute"
+        expand:
+          enable: "Specify seconds(s) of the minute"
+          name: "Seconds of the minute"
 
 date:
   title: "Pick Date"
@@ -730,7 +892,8 @@ numbers:
     reverse: |
       .input {$num :integer select=ordinal}
       .match $num
-        one {{{$num}st last}}
-        two {{{$num}nd last}}
-        few {{{$num}rd last}}
-        * {{{$num}th last}}
+        1 {{last}}
+        one {{{$num}st to last}}
+        two {{{$num}nd to last}}
+        few {{{$num}rd to last}}
+        * {{{$num}th to last}}
