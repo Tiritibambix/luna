@@ -24,7 +24,6 @@
   import { SvelteSet } from "svelte/reactivity";
   import AffectedRecurrencesModal from "./AffectedRecurrencesModal.svelte";
   import { t } from "@sveltia/i18n";
-  import { untrack } from "svelte";
   import RecurrenceInput from "../forms/RecurrenceInput.svelte";
   import Link from "../forms/Link.svelte";
   import RecurrenceRuleModal from "./RecurrenceRuleModal.svelte";
