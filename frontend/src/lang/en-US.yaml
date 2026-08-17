@@ -222,14 +222,14 @@ recurrence:
       day:
         dayname:
           limit:
-            enable: "Only on specific weekdays"
+            enable: "Only on specific days of the week"
             name: "Weekdays"
           expand:
             enable: "Specify day(s) of the week"
             name: "Weekdays"
         numeric:
           limit:
-            enable: "Only on specific weekdays"
+            enable: "Only on specific days of the week"
             name: "Weekdays"
           expand:
             enable: "Specify weekday(s)"
