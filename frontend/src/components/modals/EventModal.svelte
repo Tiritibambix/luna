@@ -160,11 +160,17 @@
   const onEdit = async () => {
     const affect = (event.id !== "" && originalEvent.date.recurrence != undefined) ? await selectAffectedRecurrences(true).catch(() => { throw new Error("Cancelled"); }) : "this";
 
-    event.date.recurrence = eventRepeats ? {
-      RRULE: `RRULE:${RRule.optionsToString(eventRecurrenceRruleOptions).split("RRULE:")[1]}`,
-      RDATE: serializeTimestampList("RDATE", event.date.allDay, "UTC", [...eventRecurrenceRdate.values()]),
-      EXDATE: serializeTimestampList("EXDATE", event.date.allDay, "UTC", [...eventRecurrenceExdate.values()]),
-    } : undefined;
+    if (eventRepeats) {
+      eventRecurrenceRruleOptions.dtstart = event.date.start;
+
+      event.date.recurrence = {
+        RRULE: `RRULE:${RRule.optionsToString(new RRule(eventRecurrenceRruleOptions).options).split("RRULE:")[1]}`,
+        RDATE: serializeTimestampList("RDATE", event.date.allDay, "UTC", [...eventRecurrenceRdate.values()]),
+        EXDATE: serializeTimestampList("EXDATE", event.date.allDay, "UTC", [...eventRecurrenceExdate.values()]),
+      };
+    } else {
+      event.date.recurrence = undefined;
+    }
 
     if (event.date.allDay) {
       event.date.end.setDate(event.date.end.getDate() + 1);
