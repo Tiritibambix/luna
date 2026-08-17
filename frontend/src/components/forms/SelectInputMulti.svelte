@@ -48,7 +48,6 @@
   function optionClick(option: Option<T>) {
     if (valuesSet.has(option.value)) values = values.filter(x => x != option.value);
     else values.push(option.value);
-    hidePopup();
     click(option.value);
   }
 </script>
