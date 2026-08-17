@@ -448,6 +448,7 @@
     [RecurrencePreset.YearlyMonthDayReverse]: { dtstart: dtstart, freq: RRule.YEARLY, bymonth: dtstart.getMonth() + 1, byweekday: weekdays[dtstart.getDay()].nth(-nthReverseMonthDay) },
   });
   let chosenRecurrencePreset: RecurrencePreset | null = $state(null);
+  let previousDtStart: Date | null = $state(null);
 
   function applyPreset(chosen: RecurrencePreset | null) {
     if (chosen == null) return;
@@ -476,6 +477,12 @@
 
   // Map recurrence to preset
   $effect(() => {
+    if (previousDtStart != dtstart && chosenRecurrencePreset != null) {
+      applyPreset(chosenRecurrencePreset);
+      previousDtStart = dtstart;
+      return;
+    }
+
     const normalizedCurrent = new RRule(options);
 
     const matches = Object
@@ -487,6 +494,7 @@
       });
 
     chosenRecurrencePreset = (matches.length == 0 ? null : matches[0][0]) as (RecurrencePreset | null);
+    previousDtStart = dtstart;
   });
 </script>
 
