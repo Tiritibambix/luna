@@ -7,6 +7,7 @@ const languages = [ "en-US", "de-DE", "pl-PL" ];
 
 languages.forEach(x => register(x, () => import(`../../lang/${x}.yaml?raw`).then(m => parse(m.default))));
 register("en-DE", () => import(`../../lang/en-US.yaml?raw`).then(m => parse(m.default))); // This is a cheat to get a DD/MM/YYYY format with English. It will be removed once a better method is developed.
+register("fr-FR", () => import("../../lang/fr-FR.yaml?raw").then(m => parse(m.default)));
 
 init({ fallbackLocale: "en-DE" });
 
